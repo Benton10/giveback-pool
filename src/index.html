@@ -132,6 +132,22 @@ function freshState(session) {
   return { session, status: "lobby", phase: "lobby", round: 1, members: 0, plan: "standard", pool: 0, trust: 100,
            claims: [], premiumsIn: 0, paidOut: 0, withheld: 0, topups: 0, log: [], charity: null, giveback: 0 };
 }
+// The page redraws every 2 seconds. Only redraw when the content changed, and keep
+// whatever someone is typing in an input, so typing isn't wiped out.
+let LAST_HTML = null;
+function paint(html) {
+  if (html === LAST_HTML) return;
+  const a = document.activeElement;
+  const keep = a && a.tagName === "INPUT" && a.id ? { id: a.id, v: a.value, s: a.selectionStart } : null;
+  LAST_HTML = html;
+  $("app").innerHTML = html;
+  if (keep) {
+    const el = $(keep.id);
+    if (el) { el.value = keep.v; el.focus(); try { el.setSelectionRange(keep.s, keep.s); } catch (e) {} }
+  }
+}
+const appEl = { set innerHTML(v) { paint(v); } };
+
 function notice(msg) { NOTICE = msg; render(); }
 
 // ---------- API ----------
@@ -397,7 +413,7 @@ function logView() {
 }
 function renderTeacher() {
   if (!IS_HOST) {
-    $("app").innerHTML = `
+    appEl.innerHTML = `
       <div class="card wide" style="max-width:520px">
         <span class="label">Giveback Pool · Teacher</span>
         <h2>Enter the teacher code</h2>
@@ -409,7 +425,7 @@ function renderTeacher() {
   }
   const lobby = G.status === "lobby";
   const body = lobby ? lobbyMain() : G.status === "done" ? doneMain() : G.phase === "price" ? priceMain() : G.phase === "claims" ? claimsMain() : charityMain();
-  $("app").innerHTML = `
+  appEl.innerHTML = `
     <header class="top wide">
       <div><span class="label">Giveback Pool · Teacher</span>
         <h1>${lobby ? "Join the class" : "Round " + Math.min(G.round, ROUNDS) + " of " + ROUNDS}</h1></div>
@@ -468,7 +484,7 @@ function renderStudent() {
         </div>`;
     }
   }
-  $("app").innerHTML = `
+  appEl.innerHTML = `
     <header class="top wide"><div><span class="label">Giveback Pool · Student</span><h1>${joined ? esc(ME.name) : "Join"}</h1></div></header>
     <div class="stack wide">
       ${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}
@@ -477,11 +493,11 @@ function renderStudent() {
 }
 
 function render() {
-  if (!LOADED) { $("app").innerHTML = `<div class="card wide"><p class="muted">Connecting to the class…</p></div>`; return; }
+  if (!LOADED) { appEl.innerHTML = `<div class="card wide"><p class="muted">Connecting to the class…</p></div>`; return; }
   // The teacher code prompt comes first, so it still shows before any game exists.
   if (!IS_STUDENT && !IS_HOST) { renderTeacher(); return; }
   if (!G) {
-    $("app").innerHTML = `<div class="card wide"><p class="muted">${IS_STUDENT ? "Waiting for the teacher to open the class." : "No game yet. Setting up…"}</p>${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}</div>`;
+    appEl.innerHTML = `<div class="card wide"><p class="muted">${IS_STUDENT ? "Waiting for the teacher to open the class." : "No game yet. Setting up…"}</p>${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}</div>`;
     return;
   }
   if (IS_STUDENT) renderStudent(); else renderTeacher();
