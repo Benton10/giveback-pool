@@ -253,6 +253,9 @@ function startGame() {
   saveState({ ...freshState(G.session), status: "play", phase: "price", members: n, pool: START_POOL });
 }
 function newClass() { saveState(freshState(rid(8))); }
+function restartGame() {
+  if (confirm("Start over? This ends the current game and clears the roster. Students will need to rejoin.")) newClass();
+}
 function setPlan(p) { if (G.phase === "price") saveState({ ...G, plan: p }); }
 function useMajority() { const r = resolve(votesFor("plan"), null); if (r) setPlan(r); }
 function collect() {
@@ -329,6 +332,10 @@ function rail() {
       <span class="label">Members in this pool</span>
       <span class="big">${G.members}</span>
       <span class="muted">Sized to the students who joined at the start.</span>
+    </div>
+    <div class="card">
+      <button class="ghost" onclick="restartGame()" style="width:100%">Start over</button>
+      <p class="hint" style="margin-top:8px">Ends this game and clears the roster. Students must rejoin.</p>
     </div>
   </div>`;
 }
@@ -538,7 +545,7 @@ function render() {
   if (IS_STUDENT) renderStudent(); else renderTeacher();
 }
 
-Object.assign(window, { startGame, newClass, setPlan, useMajority, collect, setClaim, closeRound, setCharity, reveal, join, vote, saveCode });
+Object.assign(window, { startGame, newClass, restartGame, setPlan, useMajority, collect, setClaim, closeRound, setCharity, reveal, join, vote, saveCode });
 
 // Students and the teacher both poll; the server decides what each may see.
 poll();
