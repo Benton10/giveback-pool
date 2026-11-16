@@ -478,8 +478,10 @@ function renderStudent() {
 
 function render() {
   if (!LOADED) { $("app").innerHTML = `<div class="card wide"><p class="muted">Connecting to the class…</p></div>`; return; }
+  // The teacher code prompt comes first, so it still shows before any game exists.
+  if (!IS_STUDENT && !IS_HOST) { renderTeacher(); return; }
   if (!G) {
-    $("app").innerHTML = `<div class="card wide"><p class="muted">${IS_STUDENT ? "Waiting for the teacher to open the class." : "No game yet. Setting up…"}</p></div>`;
+    $("app").innerHTML = `<div class="card wide"><p class="muted">${IS_STUDENT ? "Waiting for the teacher to open the class." : "No game yet. Setting up…"}</p>${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}</div>`;
     return;
   }
   if (IS_STUDENT) renderStudent(); else renderTeacher();
