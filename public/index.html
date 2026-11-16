@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Giveback Pool</title>
+<style>
+:root {
+  --bg: #faf6e9; --surface: #ffffff; --ink: #1f2a1f; --muted: #5d6a5a; --line: #e3dcc4;
+  --accent: #e0a800; --accent-ink: #2a1f00; --good: #2f7d4a; --warn: #9a5b00; --bad: #b3262e;
+  --display: "Space Grotesk", system-ui, sans-serif; --text: "Inter", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17190f; --surface: #21241a; --ink: #f3efdc; --muted: #a9b29c; --line: #3a3f2b;
+    --accent: #f2c230; --accent-ink: #2a1f00; --good: #7fd19a; --warn: #f0b35a; --bad: #ff8a84;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17190f; --surface: #21241a; --ink: #f3efdc; --muted: #a9b29c; --line: #3a3f2b;
+  --accent: #f2c230; --accent-ink: #2a1f00; --good: #7fd19a; --warn: #f0b35a; --bad: #ff8a84;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--text); font-size: 15px; line-height: 1.5; padding-block: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1, h2 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: 30px; }
+h2 { font-size: 22px; margin-bottom: 6px; }
+p { margin: 0 0 12px; max-width: 65ch; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.notice { color: var(--bad); font-size: 14px; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .wrap { grid-template-columns: 300px 1fr; } .wide { grid-column: 1 / -1; } }
+header.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-width: 0; }
+.stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.big { font-family: var(--display); font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; display: block; }
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.kv:first-of-type { border-top: 0; }
+.meter { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 8px 0 4px; }
+.meter > span { display: block; height: 100%; background: var(--good); transition: width .4s ease; }
+.meter > span.warn { background: var(--warn); }
+.meter > span.bad { background: var(--bad); }
+.plans { display: grid; gap: 10px; grid-template-columns: 1fr; margin: 12px 0 16px; }
+@media (min-width: 560px) { .plans { grid-template-columns: repeat(3, 1fr); } }
+.opt { font: inherit; color: inherit; text-align: left; cursor: pointer; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.opt strong { display: block; font-family: var(--display); font-size: 18px; }
+.opt .price { font-variant-numeric: tabular-nums; }
+.opt[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.primary, .ghost { font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 11px 18px; border: 1px solid transparent; }
+.primary { background: var(--accent); color: var(--accent-ink); }
+.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.claim { border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--bg); }
+.claim-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.claim-head strong { font-size: 16px; }
+.amt { font-family: var(--display); font-size: 22px; font-variant-numeric: tabular-nums; }
+.tag { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.decide { display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); margin-top: 12px; }
+.decide button, .choice { font: inherit; font-size: 14px; padding: 10px 6px; border-radius: 9px; cursor: pointer; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.decide button[aria-pressed="true"], .choice[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+.hint { font-size: 13px; color: var(--muted); }
+.choices { display: grid; gap: 8px; grid-template-columns: 1fr; margin: 10px 0 4px; }
+@media (min-width: 560px) { .choices.three { grid-template-columns: repeat(3, 1fr); } }
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.log li { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; }
+.log .when { font-size: 13px; color: var(--muted); }
+.qs { padding-left: 20px; margin: 0; display: grid; gap: 8px; }
+.verdict { font-family: var(--display); font-size: 20px; margin: 8px 0 14px; }
+.lobby { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .lobby { grid-template-columns: 260px 1fr; align-items: start; } }
+.qr img { width: 100%; max-width: 240px; height: auto; background: #fff; padding: 8px; border-radius: 12px; }
+.url { font-family: ui-monospace, monospace; font-size: 13px; word-break: break-all; }
+.roster { list-style: none; padding: 0; margin: 8px 0 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.roster li { background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; font-size: 14px; }
+.joinrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.joinrow input { font: inherit; flex: 1 1 180px; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+</style>
+
+<div class="wrap" id="app"><p class="muted">Connecting to the class…</p></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+const TARGET = 1000, ROUNDS = 8, START_POOL = 1000;
+const PLANS = {
+  low:      { label: "Low",      price: 30, note: "Cheapest for members. Little cushion if a big claim lands." },
+  standard: { label: "Standard", price: 50, note: "Balanced. Works if claims stay near the average." },
+  high:     { label: "High",     price: 80, note: "Builds a cushion. Members pay more each round." }
+};
+const CHARITIES = ["Local food bank", "Animal shelter", "Youth reading program"];
+const CLAIMS = {
+  small:  { items: ["Phone screen cracked", "Bike stolen", "Laptop water damage", "Pet vet visit", "Lost luggage"], lo: 80, hi: 400 },
+  medium: { items: ["Kitchen flood", "Car fender-bender", "Medical equipment damaged", "Stolen bicycle and helmet set"], lo: 500, hi: 1500 },
+  large:  { items: ["Apartment fire", "Storm roof damage", "Burst pipe ceiling collapse"], lo: 3000, hi: 6000 }
+};
+const CLAIM_LABEL = { full: "Pay in full", half: "Pay half", deny: "Deny" };
+const CLAIM_KEYS = ["full", "half", "deny"];
+
+const IS_STUDENT = location.pathname.replace(/\/+$/, "").endsWith("/join");
+const JOIN_URL = location.origin + "/join";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const rnd = (lo, hi) => Math.round(lo + Math.random() * (hi - lo));
+const rid = (n = 8) => Array.from({ length: n }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("");
+const storeGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const storeSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+
+const PID = storeGet("gbp-pid") || (() => { const p = rid(12); storeSet("gbp-pid", p); return p; })();
+let HOST_CODE = storeGet("gbp-host") || "";
+let G = null, LOADED = false, IS_HOST = false, NOTICE = "";
+let PLAYERS = [], BALLOTS = [], MY = [], ME = null;
+
+function makeQr(text) {
+  try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createImgTag(6, 8, "QR code to join the class"); }
+  catch (e) { return `<p class="muted">Open ${esc(text)}</p>`; }
+}
+const QR_HTML = IS_STUDENT ? "" : makeQr(JOIN_URL);
+
+function freshState(session) {
+  return { session, status: "lobby", phase: "lobby", round: 1, members: 0, plan: "standard", pool: 0, trust: 100,
+           claims: [], premiumsIn: 0, paidOut: 0, withheld: 0, topups: 0, log: [], charity: null, giveback: 0 };
+}
+function notice(msg) { NOTICE = msg; render(); }
+
+// ---------- API ----------
+async function api(path, { method = "GET", body, host = false } = {}) {
+  const headers = { "content-type": "application/json" };
+  if (host && HOST_CODE) headers["x-host-code"] = HOST_CODE;
+  const r = await fetch("/api" + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(data.error || ("HTTP " + r.status)), { status: r.status });
+  return data;
+}
+async function poll() {
+  try {
+    const d = await api("/state?pid=" + encodeURIComponent(PID), { host: !IS_STUDENT });
+    G = d.state; IS_HOST = !!d.host; LOADED = true;
+    PLAYERS = d.players || []; BALLOTS = d.ballots || []; MY = d.mine || []; ME = d.me || null;
+    if (!IS_STUDENT && HOST_CODE && !IS_HOST) { NOTICE = "That teacher code doesn't match. Re-enter it."; }
+    else if (NOTICE.startsWith("Connection")) NOTICE = "";
+    // First visit ever: the teacher creates the lobby.
+    if (!G && IS_HOST && !creatingFirstGame) {
+      creatingFirstGame = true;
+      saveState(freshState(rid(8))).finally(() => { creatingFirstGame = false; });
+    }
+  } catch (e) { NOTICE = "Connection problem: " + e.message; }
+  render();
+}
+let creatingFirstGame = false;
+
+// Teacher writes are queued so each one lands before the next starts.
+let queue = Promise.resolve();
+function saveState(next) {
+  queue = queue.then(() => api("/host/state", { method: "POST", body: next, host: true }))
+    .then(poll)
+    .catch(e => notice("Could not save: " + e.message));
+  return queue;
+}
+
+// ---------- tallies ----------
+const roster = () => PLAYERS;
+function votesFor(kind) {
+  const counts = {};
+  for (const b of BALLOTS) if (b.kind === kind) counts[b.choice] = (counts[b.choice] || 0) + 1;
+  return counts;
+}
+const total = counts => Object.values(counts).reduce((a, b) => a + b, 0);
+function resolve(counts, fallback) {
+  const e = Object.entries(counts);
+  if (!e.length) return null;
+  e.sort((a, b) => b[1] - a[1]);
+  if (e.length > 1 && e[0][1] === e[1][1]) return fallback;
+  return e[0][0];
+}
+const myChoice = kind => { const b = MY.find(x => x.kind === kind); return b ? b.choice : null; };
+
+// ---------- teacher actions ----------
+function makeClaim(tier) { const c = CLAIMS[tier]; return { id: rid(6), tier, desc: pick(c.items), amt: rnd(c.lo, c.hi), decision: null }; }
+function drawClaims(round) {
+  const x = Math.random();
+  const n = x < 0.25 ? 0 : x < 0.75 ? 1 : 2;
+  const list = [];
+  for (let i = 0; i < n; i++) list.push(makeClaim(Math.random() < 0.05 ? "large" : Math.random() < 0.4 ? "small" : "medium"));
+  if (round === 4 || round === 8) list.push(makeClaim("large"));
+  return list;
+}
+function startGame() {
+  const n = roster().length;
+  if (!n) return;
+  saveState({ ...freshState(G.session), status: "play", phase: "price", members: n, pool: START_POOL });
+}
+function newClass() { saveState(freshState(rid(8))); }
+function setPlan(p) { if (G.phase === "price") saveState({ ...G, plan: p }); }
+function useMajority() { const r = resolve(votesFor("plan"), null); if (r) setPlan(r); }
+function collect() {
+  const amt = G.members * PLANS[G.plan].price;
+  saveState({ ...G, pool: G.pool + amt, premiumsIn: G.premiumsIn + amt, claims: drawClaims(G.round), phase: "claims" });
+}
+function setClaim(id, d) { saveState({ ...G, claims: G.claims.map(c => (c.id === id ? { ...c, decision: d } : c)) }); }
+function effectiveClaim(c) { return c.decision || resolve(votesFor("claim-" + c.id), "half"); }
+function closeRound() {
+  let paid = 0, withheld = 0, loss = 0;
+  for (const c of G.claims) {
+    const d = effectiveClaim(c) || "half";
+    const p = d === "full" ? c.amt : d === "half" ? c.amt / 2 : 0;
+    paid += p; withheld += c.amt - p;
+    if (d === "half") loss += 3;
+    if (d === "deny") loss += c.tier === "large" ? 12 : 8;
+  }
+  let pool = G.pool - paid, topups = G.topups, trust = Math.max(0, G.trust - loss), topup = 0;
+  if (pool < 0) { topup = -pool; pool = 0; topups += topup; trust = Math.max(0, trust - 10); }
+  const log = [{ round: G.round, plan: PLANS[G.plan].label, claims: G.claims.length,
+                 collected: G.members * PLANS[G.plan].price, paid, withheld, topup }, ...G.log];
+  const round = G.round + 1;
+  saveState({ ...G, pool, paidOut: G.paidOut + paid, withheld: G.withheld + withheld, topups, trust, log,
+              round, phase: round > ROUNDS ? "charity" : "price", claims: [] });
+}
+function setCharity(i) { saveState({ ...G, charity: CHARITIES[i] }); }
+function reveal() {
+  const r = resolve(votesFor("charity"), null);
+  const charity = G.charity || (r !== null ? CHARITIES[Number(r)] : null);
+  if (!charity) return;
+  const giveback = G.topups > 0 ? 0 : Math.max(0, G.pool - TARGET);
+  saveState({ ...G, charity, giveback, pool: G.pool - giveback, status: "done", phase: "result" });
+}
+function saveCode() {
+  const v = ($("code") && $("code").value || "").trim();
+  if (!v) return;
+  HOST_CODE = v; storeSet("gbp-host", v); NOTICE = ""; poll();
+}
+
+// ---------- student actions ----------
+async function join() {
+  const name = (($("nm") && $("nm").value) || "").trim().slice(0, 24);
+  if (!name) return;
+  try { await api("/join", { method: "POST", body: { pid: PID, name } }); poll(); }
+  catch (e) { notice(e.status === 409 ? "The class has already started. Ask your teacher for the next game." : "Could not join: " + e.message); }
+}
+async function vote(kind, choice) {
+  try { await api("/vote", { method: "POST", body: { pid: PID, kind, choice: String(choice) } }); poll(); }
+  catch (e) { notice("Vote not saved: " + e.message); }
+}
+
+// ---------- teacher views ----------
+function rail() {
+  return `
+  <div class="stack">
+    <div class="card">
+      <span class="label">Pool balance</span>
+      <span class="big">${fmt(G.pool)}</span>
+      <span class="muted">Target reserve ${fmt(TARGET)}</span>
+    </div>
+    <div class="card">
+      <span class="label">Member trust</span>
+      <div class="meter"><span class="${G.trust >= 60 ? "" : G.trust >= 30 ? "warn" : "bad"}" style="width:${G.trust}%"></span></div>
+      <span class="muted">${G.trust}/100. Denied and cut claims lower trust.</span>
+    </div>
+    <div class="card">
+      <span class="label">Totals so far</span>
+      <div class="kv"><span>Premiums in</span><span>${fmt(G.premiumsIn)}</span></div>
+      <div class="kv"><span>Paid out</span><span>${fmt(G.paidOut)}</span></div>
+      <div class="kv"><span>Withheld</span><span>${fmt(G.withheld)}</span></div>
+      <div class="kv"><span>Member top-ups</span><span>${fmt(G.topups)}</span></div>
+    </div>
+    <div class="card">
+      <span class="label">Members in this pool</span>
+      <span class="big">${G.members}</span>
+      <span class="muted">Sized to the students who joined at the start.</span>
+    </div>
+  </div>`;
+}
+function lobbyMain() {
+  const r = roster();
+  return `
+  <div class="lobby">
+    <div class="qr">${QR_HTML}</div>
+    <div>
+      <span class="label">Students scan the code or open</span>
+      <p class="url">${esc(JOIN_URL)}</p>
+      <h2>${r.length} joined</h2>
+      <ul class="roster">${r.map(p => `<li>${esc(p.name)}</li>`).join("") || '<li class="muted">Waiting for students to scan the code.</li>'}</ul>
+      <div class="actions">
+        <button class="primary" onclick="startGame()" ${r.length ? "" : "disabled"}>Start with ${r.length} member${r.length === 1 ? "" : "s"}</button>
+      </div>
+      <p class="hint" style="margin-top:12px">The pool is sized to the students who have joined when you start. Anyone who joins later waits for the next game.</p>
+    </div>
+  </div>`;
+}
+function priceMain() {
+  const pc = votesFor("plan");
+  const voted = total(pc);
+  const leader = resolve(pc, null);
+  return `
+    <span class="label">Round ${G.round} of ${ROUNDS}</span>
+    <h2>Set the premium</h2>
+    <p>Students vote on their phones. Use the class vote, or pick a plan yourself.</p>
+    <div class="plans">
+      ${Object.entries(PLANS).map(([k, p]) => `
+        <button class="opt" aria-pressed="${G.plan === k}" onclick="setPlan('${k}')">
+          <strong>${p.label}</strong>
+          <span class="price">${fmt(p.price)} per member</span>
+          <div class="muted small" style="margin-top:4px">${pc[k] || 0} vote${pc[k] === 1 ? "" : "s"}</div>
+        </button>`).join("")}
+    </div>
+    <div class="actions">
+      <button class="ghost" onclick="useMajority()" ${leader ? "" : "disabled"}>Use class vote</button>
+      <button class="primary" onclick="collect()">Collect premiums and open claims</button>
+      <span class="hint">${voted} of ${G.members} students voted. Collects ${fmt(G.members * PLANS[G.plan].price)}.</span>
+    </div>`;
+}
+function claimsMain() {
+  const ready = G.claims.every(c => effectiveClaim(c));
+  const cards = G.claims.length ? G.claims.map(c => {
+    const cnt = votesFor("claim-" + c.id);
+    const eff = effectiveClaim(c);
+    const note = c.decision ? "Teacher decision set." : eff ? "Will use the class vote (ties count as pay half)." : "Waiting for votes or a decision.";
+    return `
+    <div class="claim">
+      <div class="claim-head">
+        <div><span class="tag">${c.tier} claim</span><br><strong>${esc(c.desc)}</strong></div>
+        <span class="amt">${fmt(c.amt)}</span>
+      </div>
+      <p class="hint" style="margin-top:8px">Class votes: ${CLAIM_KEYS.map(d => `${CLAIM_LABEL[d]} ${cnt[d] || 0}`).join(" · ")} (${total(cnt)} of ${G.members})</p>
+      <div class="decide">${CLAIM_KEYS.map(d => `<button aria-pressed="${c.decision === d}" onclick="setClaim('${c.id}','${d}')">${CLAIM_LABEL[d]}</button>`).join("")}</div>
+      <p class="hint" style="margin-top:8px">${note}</p>
+    </div>`;
+  }).join("") : `<p class="muted">No claims came in this round. Close the round to move on.</p>`;
+  return `
+    <span class="label">Round ${G.round} of ${ROUNDS}</span>
+    <h2>Decide the claims</h2>
+    <p>Students vote on each claim. Click a decision to override the class vote.</p>
+    ${cards}
+    <div class="actions">
+      <button class="primary" onclick="closeRound()" ${ready ? "" : "disabled"}>Close round</button>
+      <span class="hint">${ready ? "Ready to close." : "Every claim needs a vote or a decision."}</span>
+    </div>`;
+}
+function charityMain() {
+  const cc = votesFor("charity");
+  const r = resolve(cc, null);
+  const ready = G.charity || r !== null;
+  return `
+    <span class="label">Year complete</span>
+    <h2>Where does the leftover go?</h2>
+    <p>The pool keeps ${fmt(TARGET)} as a reserve. Anything above that goes to the cause the class picks. If members had to top up, there is nothing to give back.</p>
+    <div class="choices three">
+      ${CHARITIES.map((c, i) => `<button class="choice" aria-pressed="${G.charity === c}" onclick="setCharity(${i})">${esc(c)}<br><span class="small muted">${cc[String(i)] || 0} vote${cc[String(i)] === 1 ? "" : "s"}</span></button>`).join("")}
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="reveal()" ${ready ? "" : "disabled"}>Reveal the giveback</button>
+      <span class="hint">${G.charity ? "Teacher pick set." : r !== null ? "Will use the class vote." : "Waiting for votes or a pick."}</span>
+    </div>`;
+}
+function doneMain() {
+  let verdict;
+  if (G.topups > 0) verdict = "Members had to top up, so the pool gave nothing back.";
+  else if (G.giveback > 0) verdict = `${fmt(G.giveback)} went to the ${esc(G.charity.toLowerCase())}.`;
+  else verdict = "The pool only covered its claims. Nothing was left to give back.";
+  const qs = [
+    "Which premium plan did the class pick, and what made you choose it?",
+    "When you denied or cut a claim, what happened to member trust? Who paid the cost?",
+    "If you knew the outcome before a claim, would the pool still be insurance?",
+    "Should unused premium go back to members, to a cause, or stay in reserve? Why?",
+    "What does this game leave out that matters for a real insurer, such as speed, fraud checks, and pricing by risk?"
+  ];
+  return `
+    <span class="label">Final result</span>
+    <h2>Giveback complete</h2>
+    <p class="verdict">${verdict}</p>
+    <div class="kv"><span>Pool left after giveback</span><span>${fmt(G.pool)}</span></div>
+    <div class="kv"><span>Giveback</span><span>${fmt(G.giveback)}</span></div>
+    <div class="kv"><span>Final member trust</span><span>${G.trust}/100</span></div>
+    <h2 style="margin-top:22px;font-size:18px">Discussion questions</h2>
+    <ol class="qs">${qs.map(q => `<li>${q}</li>`).join("")}</ol>
+    <div class="actions"><button class="ghost" onclick="newClass()">Start a new class</button></div>`;
+}
+function logView() {
+  if (!G.log.length) return "";
+  const items = G.log.map(e => `
+    <li>
+      <div><strong>Round ${e.round}</strong> <span class="muted">${e.plan} plan</span></div>
+      <div class="when">Collected ${fmt(e.collected)} · ${e.claims} claim${e.claims === 1 ? "" : "s"} · Paid ${fmt(e.paid)} · Withheld ${fmt(e.withheld)}${e.topup ? ` · Top-up ${fmt(e.topup)}` : ""}</div>
+    </li>`).join("");
+  return `<div class="card"><span class="label">Round log</span><ul class="log" style="margin-top:10px">${items}</ul></div>`;
+}
+function renderTeacher() {
+  if (!IS_HOST) {
+    $("app").innerHTML = `
+      <div class="card wide" style="max-width:520px">
+        <span class="label">Giveback Pool · Teacher</span>
+        <h2>Enter the teacher code</h2>
+        <p>Only the teacher can run the game. Ask whoever set up the site for the code.</p>
+        ${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}
+        <div class="joinrow"><input id="code" type="password" placeholder="Teacher code" autocomplete="off"><button class="primary" onclick="saveCode()">Open</button></div>
+      </div>`;
+    return;
+  }
+  const lobby = G.status === "lobby";
+  const body = lobby ? lobbyMain() : G.status === "done" ? doneMain() : G.phase === "price" ? priceMain() : G.phase === "claims" ? claimsMain() : charityMain();
+  $("app").innerHTML = `
+    <header class="top wide">
+      <div><span class="label">Giveback Pool · Teacher</span>
+        <h1>${lobby ? "Join the class" : "Round " + Math.min(G.round, ROUNDS) + " of " + ROUNDS}</h1></div>
+    </header>
+    ${lobby ? "" : rail()}
+    <div class="stack ${lobby ? "wide" : ""}">
+      ${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}
+      <div class="card">${body}</div>
+      ${lobby ? "" : logView()}
+    </div>`;
+}
+
+// ---------- student views ----------
+function renderStudent() {
+  const joined = !!ME;
+  let body;
+  if (!joined) {
+    body = G.status !== "lobby"
+      ? `<span class="label">Giveback Pool</span><h2>This class has already started</h2><p>Ask your teacher to open the next game, then scan the code again.</p>`
+      : `<span class="label">Giveback Pool</span><h2>Join the class</h2>
+         <p>Enter a name your class will recognize. It appears on the teacher's screen.</p>
+         <div class="joinrow"><input id="nm" maxlength="24" placeholder="Your name" autocomplete="off"><button class="primary" onclick="join()">Join</button></div>`;
+  } else {
+    const name = esc(ME.name);
+    if (G.status === "lobby") {
+      body = `<span class="label">You're in as ${name}</span><h2>Waiting to start</h2><p>Keep this page open. The teacher will start the game shortly.</p>`;
+    } else if (G.status === "done") {
+      body = `<span class="label">Final result</span><h2>Giveback complete</h2>
+        <p class="verdict">${G.topups > 0 ? "Members had to top up, so the pool gave nothing back." : G.giveback > 0 ? fmt(G.giveback) + " went to the " + esc(G.charity.toLowerCase()) + "." : "Nothing was left to give back."}</p>
+        <div class="kv"><span>Pool members</span><span>${G.members}</span></div>
+        <div class="kv"><span>Final member trust</span><span>${G.trust}/100</span></div>`;
+    } else if (G.phase === "price") {
+      const m = myChoice("plan");
+      body = `<span class="label">Round ${G.round} of ${ROUNDS}</span><h2>Vote on the premium</h2>
+        <p>${m ? `You voted ${PLANS[m].label}. The teacher makes the final call.` : "Pick the plan you think the pool should use this round."}</p>
+        <div class="choices three">
+          ${Object.entries(PLANS).map(([k, p]) => `<button class="choice" aria-pressed="${m === k}" onclick="vote('plan','${k}')"><strong>${p.label}</strong><br><span class="small">${fmt(p.price)} each</span></button>`).join("")}
+        </div>`;
+    } else if (G.phase === "claims") {
+      body = `<span class="label">Round ${G.round} of ${ROUNDS}</span><h2>Vote on the claims</h2>
+        <p>Choose what the pool should do with each claim.</p>
+        ${G.claims.length ? G.claims.map(c => {
+          const m = myChoice("claim-" + c.id);
+          return `<div class="claim">
+            <div class="claim-head"><div><span class="tag">${c.tier} claim</span><br><strong>${esc(c.desc)}</strong></div><span class="amt">${fmt(c.amt)}</span></div>
+            ${c.decision ? `<p class="hint" style="margin-top:8px">Teacher decided: ${CLAIM_LABEL[c.decision]}</p>` : ""}
+            <div class="decide">${CLAIM_KEYS.map(d => `<button aria-pressed="${m === d}" onclick="vote('claim-${c.id}','${d}')">${CLAIM_LABEL[d]}</button>`).join("")}</div>
+          </div>`;
+        }).join("") : `<p class="muted">No claims this round. Wait for the teacher to continue.</p>`}`;
+    } else {
+      const m = myChoice("charity");
+      body = `<span class="label">Year complete</span><h2>Pick a cause</h2>
+        <p>Vote on where any leftover money should go.</p>
+        <div class="choices three">
+          ${CHARITIES.map((c, i) => `<button class="choice" aria-pressed="${m === String(i)}" onclick="vote('charity',${i})">${esc(c)}</button>`).join("")}
+        </div>`;
+    }
+  }
+  $("app").innerHTML = `
+    <header class="top wide"><div><span class="label">Giveback Pool · Student</span><h1>${joined ? esc(ME.name) : "Join"}</h1></div></header>
+    <div class="stack wide">
+      ${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}
+      <div class="card">${body}</div>
+    </div>`;
+}
+
+function render() {
+  if (!LOADED) { $("app").innerHTML = `<div class="card wide"><p class="muted">Connecting to the class…</p></div>`; return; }
+  if (!G) {
+    $("app").innerHTML = `<div class="card wide"><p class="muted">${IS_STUDENT ? "Waiting for the teacher to open the class." : "No game yet. Setting up…"}</p></div>`;
+    return;
+  }
+  if (IS_STUDENT) renderStudent(); else renderTeacher();
+}
+
+Object.assign(window, { startGame, newClass, setPlan, useMajority, collect, setClaim, closeRound, setCharity, reveal, join, vote, saveCode });
+
+// Students and the teacher both poll; the server decides what each may see.
+poll();
+setInterval(poll, 2000);
+</script>
