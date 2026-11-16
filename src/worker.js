@@ -1,5 +1,8 @@
-// Giveback Pool API. Runs on Cloudflare Pages next to the static site.
-// Routes: /join serves the student page; /api/* reads and writes the D1 database.
+// Giveback Pool: serves the game page and the API that reads and writes the D1 database.
+// Routes: / and /join serve the page (the same file; the page picks teacher or student by URL);
+// /api/* is the API.
+
+import INDEX_HTML from "./index.html";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -111,11 +114,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/join") {
-      url.pathname = "/";
-      return env.ASSETS.fetch(new Request(url, request));
+    if (url.pathname === "/" || url.pathname === "/join") {
+      return new Response(INDEX_HTML, {
+        headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+      });
     }
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (!url.pathname.startsWith("/api/")) return json({ error: "not_found" }, 404);
 
     try {
       const path = url.pathname.slice(4);

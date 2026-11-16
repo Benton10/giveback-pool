@@ -1,10 +1,14 @@
 name = "giveback-pool"
-pages_build_output_dir = "public"
+main = "src/worker.js"
 compatibility_date = "2025-01-01"
 
-# Created with: npx wrangler d1 create giveback-pool
-# Paste the database_id it prints here.
+# The game page is bundled into the worker as text (src/index.html).
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+
+# Database created with: npx wrangler d1 create giveback-pool
 [[d1_databases]]
 binding = "DB"
 database_name = "giveback-pool"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "ffe38b49-ce5c-441b-abb3-a52968777322"
