@@ -78,6 +78,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .log .when { font-size: 13px; color: var(--muted); }
 .qs { padding-left: 20px; margin: 0; display: grid; gap: 8px; }
 .verdict { font-family: var(--display); font-size: 20px; margin: 8px 0 14px; }
+.story { margin: 6px 0 0; color: var(--muted); font-size: 14px; max-width: 70ch; }
+.dilemma { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--warn); background: var(--surface); border-radius: 6px; font-size: 14px; max-width: 70ch; }
 .lobby { display: grid; gap: 20px; grid-template-columns: 1fr; }
 @media (min-width: 640px) { .lobby { grid-template-columns: 260px 1fr; align-items: start; } }
 .qr img { width: 100%; max-width: 240px; height: auto; background: #fff; padding: 8px; border-radius: 12px; }
@@ -99,9 +101,35 @@ const PLANS = {
 };
 const CHARITIES = ["Local food bank", "Animal shelter", "Youth reading program"];
 const CLAIMS = {
-  small:  { items: ["Phone screen cracked", "Bike stolen", "Laptop water damage", "Pet vet visit", "Lost luggage"], lo: 80, hi: 400 },
-  medium: { items: ["Kitchen flood", "Car fender-bender", "Medical equipment damaged", "Stolen bicycle and helmet set"], lo: 500, hi: 1500 },
-  large:  { items: ["Apartment fire", "Storm roof damage", "Burst pipe ceiling collapse"], lo: 3000, hi: 6000 }
+  small: { lo: 80, hi: 400, items: [
+    { title: "Phone screen cracked", story: "A member dropped their phone on the sidewalk. The repair quote came back at $180." },
+    { title: "Bike stolen", story: "The bike was locked with a cable lock. The member says the lock was cut. The bike was about three years old.",
+      dilemma: "The policy pays for theft only when the lock was cut. Should the pool take the member's word for it?" },
+    { title: "Dog surgery after eating a sock", story: "The member's dog swallowed a sock and needed surgery. The member asks the pool to pay the full $380 bill.",
+      dilemma: "The accident was avoidable. Should the pool pay for preventable accidents, or only for illness?" },
+    { title: "Lost luggage on a trip", story: "An airline lost a suitcase for four days. The member bought clothes and toiletries, $240 in total, and kept every receipt.",
+      dilemma: "One receipt is for a $60 video game. Should the pool pay for it?" }
+  ]},
+  medium: { lo: 500, hi: 1500, items: [
+    { title: "Kitchen flood", story: "A washing machine hose burst overnight. The member's kitchen floor is ruined. The downstairs neighbor's ceiling is also damaged, and the neighbor wants the member to cover it.",
+      dilemma: "The neighbor's damage is outside this policy. Should the pool pay it anyway to keep the peace?" },
+    { title: "Car fender-bender", story: "The member backed into a parked car in a grocery lot. The other driver left a note with a phone number. No one else saw it.",
+      dilemma: "The member admits they were checking a text just before the crash. Should distracted driving change the payout?" },
+    { title: "Oxygen concentrator damaged", story: "A power surge damaged a home oxygen machine. The replacement costs $1,100. The member has a tight budget and cannot pay it alone.",
+      dilemma: "Should financial hardship change the decision, or should every claim be treated the same?" },
+    { title: "Roommate's laptop spilled on", story: "The member's roommate spilled coffee on the roommate's own laptop. The member filed the claim under their own policy. The repair is $900.",
+      dilemma: "The member does not own the laptop. Should the pool pay someone for property they don't own?" },
+    { title: "Phone damage photo", story: "A member submitted a photo of a water-damaged phone. The photo's timestamp is from last year. The member says the photo is from the new drop.",
+      dilemma: "A fraud check flagged the photo. Should the pool trust the flag, or ask the member for more proof and risk treating an honest mistake as fraud?" }
+  ]},
+  large: { lo: 3000, hi: 6000, items: [
+    { title: "Apartment fire", story: "A candle left burning in a bedroom started a fire. The member was out. Sprinklers kept the damage limited to one room.",
+      dilemma: "The member admits the candle was lit after the landlord had warned about candles. Should carelessness reduce the payout?" },
+    { title: "Storm damage to the roof", story: "A windstorm tore part of the roof off. An inspection six months earlier had flagged the same area as loose, and the member did not repair it.",
+      dilemma: "Was the delay neglect, or a reasonable choice about money? Should the pool pay in full, in part, or not at all?" },
+    { title: "Burst pipe ceiling collapse", story: "A frozen pipe burst and part of a ceiling collapsed. The member rents, and the landlord refuses to pay for repairs.",
+      dilemma: "The landlord is legally responsible. Should the pool pay the member and then chase the landlord, or leave the member to fight?" }
+  ]}
 };
 const CLAIM_LABEL = { full: "Pay in full", half: "Pay half", deny: "Deny" };
 const CLAIM_KEYS = ["full", "half", "deny"];
@@ -203,7 +231,14 @@ function resolve(counts, fallback) {
 const myChoice = kind => { const b = MY.find(x => x.kind === kind); return b ? b.choice : null; };
 
 // ---------- teacher actions ----------
-function makeClaim(tier) { const c = CLAIMS[tier]; return { id: rid(6), tier, desc: pick(c.items), amt: rnd(c.lo, c.hi), decision: null }; }
+function claimText(c) {
+  return (c.story ? `<p class="story">${esc(c.story)}</p>` : "") +
+         (c.dilemma ? `<p class="dilemma"><strong>Dilemma:</strong> ${esc(c.dilemma)}</p>` : "");
+}
+function makeClaim(tier) {
+  const c = CLAIMS[tier], it = pick(c.items);
+  return { id: rid(6), tier, desc: it.title, story: it.story, dilemma: it.dilemma || null, amt: rnd(c.lo, c.hi), decision: null };
+}
 function drawClaims(round) {
   const x = Math.random();
   const n = x < 0.25 ? 0 : x < 0.75 ? 1 : 2;
@@ -345,7 +380,7 @@ function claimsMain() {
     return `
     <div class="claim">
       <div class="claim-head">
-        <div><span class="tag">${c.tier} claim</span><br><strong>${esc(c.desc)}</strong></div>
+        <div><span class="tag">${c.tier} claim</span><br><strong>${esc(c.desc)}</strong>${claimText(c)}</div>
         <span class="amt">${fmt(c.amt)}</span>
       </div>
       <p class="hint" style="margin-top:8px">Class votes: ${CLAIM_KEYS.map(d => `${CLAIM_LABEL[d]} ${cnt[d] || 0}`).join(" · ")} (${total(cnt)} of ${G.members})</p>
@@ -470,7 +505,7 @@ function renderStudent() {
         ${G.claims.length ? G.claims.map(c => {
           const m = myChoice("claim-" + c.id);
           return `<div class="claim">
-            <div class="claim-head"><div><span class="tag">${c.tier} claim</span><br><strong>${esc(c.desc)}</strong></div><span class="amt">${fmt(c.amt)}</span></div>
+            <div class="claim-head"><div><span class="tag">${c.tier} claim</span><br><strong>${esc(c.desc)}</strong>${claimText(c)}</div><span class="amt">${fmt(c.amt)}</span></div>
             ${c.decision ? `<p class="hint" style="margin-top:8px">Teacher decided: ${CLAIM_LABEL[c.decision]}</p>` : ""}
             <div class="decide">${CLAIM_KEYS.map(d => `<button aria-pressed="${m === d}" onclick="vote('claim-${c.id}','${d}')">${CLAIM_LABEL[d]}</button>`).join("")}</div>
           </div>`;
