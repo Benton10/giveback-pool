@@ -93,7 +93,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 <div class="wrap" id="app"><p class="muted">Connecting to the class…</p></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
-const TARGET = 1000, ROUNDS = 8, START_POOL = 1000;
+const TARGET = 1000, ROUNDS = 12, START_POOL = 1000;
 const PLANS = {
   low:      { label: "Low",      price: 30, note: "Cheapest for members. Little cushion if a big claim lands." },
   standard: { label: "Standard", price: 50, note: "Balanced. Works if claims stay near the average." },
@@ -244,7 +244,7 @@ function drawClaims(round) {
   const n = x < 0.25 ? 0 : x < 0.75 ? 1 : 2;
   const list = [];
   for (let i = 0; i < n; i++) list.push(makeClaim(Math.random() < 0.05 ? "large" : Math.random() < 0.4 ? "small" : "medium"));
-  if (round === 4 || round === 8) list.push(makeClaim("large"));
+  if (round % 4 === 0) list.push(makeClaim("large"));  // a big claim every fourth round
   return list;
 }
 function startGame() {
