@@ -91,6 +91,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .chip-full { background: var(--good); color: #fff; }
 .chip-half { background: var(--warn); color: #fff; }
 .chip-deny { background: var(--bad); color: #fff; }
+.chip-in { background: var(--good); color: #fff; }
+.chip-out { background: var(--bad); color: #fff; }
+.chips { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .big-meter { height: 22px; }
 .drop { font-family: var(--display); font-size: 22px; margin-top: 10px; }
 .lobby { display: grid; gap: 20px; grid-template-columns: 1fr; }
@@ -116,36 +119,36 @@ const PLANS = {
 const CHARITIES = ["Local food bank", "Animal shelter", "Youth reading program"];
 const CLAIMS = {
   small: { lo: 40, hi: 200, items: [
-    {title: "Phone screen cracked", story: "A member dropped their phone on the sidewalk. The repair quote came back at $180." },
-    {title: "Bike stolen", story: "The bike was locked with a cable lock. The member says the lock was cut. The bike was about three years old.", dilemma: "The policy pays for theft only when the lock was cut. Should the pool take the member's word for it?" },
-    {title: "Dog surgery after eating a sock", story: "The member's dog swallowed a sock and needed surgery. The member asks the pool to pay the full $380 bill.", dilemma: "The accident was avoidable. Should the pool pay for preventable accidents, or only for illness?" },
-    {title: "Lost luggage on a trip", story: "An airline lost a suitcase for four days. The member bought clothes and toiletries, $240 in total, and kept every receipt.", dilemma: "One receipt is for a $60 video game. Should the pool pay for it?" },
-    {title: "Laptop charger burned out", story: "A charger burned out after a power surge. The member bought a new one for $45.", dilemma: "The member also bought a $20 laptop sleeve. Should the pool pay for accessories?" },
-    {title: "Glasses broken on a hike", story: "The member sat on their glasses on a hike. The replacement frames cost $190.", dilemma: "The member admits they left the glasses on a rock. Does carelessness matter when the loss is small?" },
-    {title: "Concert tickets lost", story: "A member lost two concert tickets they bought for $120. They say the tickets were in a jacket pocket that went through the wash.", dilemma: "If the pool covers small losses, does that encourage people to file for everything?" },
-    {title: "Scooter crash on a curb", story: "A member's electric scooter fell over on a curb. The front wheel and handlebar need replacing. The repair is $160.", dilemma: "The member was riding without a helmet. Should safety choices affect a claim?" },
-    {title: "Package stolen from a porch", story: "A package with $180 headphones was taken from a porch. The tracking page says delivered.", dilemma: "The delivery photo shows a neighbor's door. Who should the pool believe?" },
-    {title: "Pet bird fell ill", story: "A pet bird was sick for a week, and the vet bill is $210. The member says they would rather not file, but they need help.", dilemma: "The policy covers accidents, not pet illness. Should the pool stretch the policy for a member in need?" }
+    {title: "Phone screen cracked", policy: "covered", story: "A member dropped their phone on the sidewalk. The repair quote came back at $180." },
+    {title: "Bike stolen", policy: "covered", story: "The bike was locked with a cable lock. The member says the lock was cut. The bike was about three years old.", dilemma: "The policy pays for theft only when the lock was cut. Should the pool take the member's word for it?" },
+    {title: "Dog surgery after eating a sock", policy: "covered", story: "The member's dog swallowed a sock and needed surgery. The member asks the pool to pay the full $380 bill.", dilemma: "The accident was avoidable. Should the pool pay for preventable accidents, or only for illness?" },
+    {title: "Lost luggage on a trip", policy: "partial", story: "An airline lost a suitcase for four days. The member bought clothes and toiletries, $240 in total, and kept every receipt.", dilemma: "One receipt is for a $60 video game. Should the pool pay for it?" },
+    {title: "Laptop charger burned out", policy: "partial", story: "A charger burned out after a power surge. The member bought a new one for $45.", dilemma: "The member also bought a $20 laptop sleeve. Should the pool pay for accessories?" },
+    {title: "Glasses broken on a hike", policy: "covered", story: "The member sat on their glasses on a hike. The replacement frames cost $190.", dilemma: "The member admits they left the glasses on a rock. Does carelessness matter when the loss is small?" },
+    {title: "Concert tickets lost", policy: "excluded", story: "A member lost two concert tickets they bought for $120. They say the tickets were in a jacket pocket that went through the wash.", dilemma: "If the pool covers small losses, does that encourage people to file for everything?" },
+    {title: "Scooter crash on a curb", policy: "covered", story: "A member's electric scooter fell over on a curb. The front wheel and handlebar need replacing. The repair is $160.", dilemma: "The member was riding without a helmet. Should safety choices affect a claim?" },
+    {title: "Package stolen from a porch", policy: "covered", story: "A package with $180 headphones was taken from a porch. The tracking page says delivered.", dilemma: "The delivery photo shows a neighbor's door. Who should the pool believe?" },
+    {title: "Pet bird fell ill", policy: "excluded", story: "A pet bird was sick for a week, and the vet bill is $210. The member says they would rather not file, but they need help.", dilemma: "The policy covers accidents, not pet illness. Should the pool stretch the policy for a member in need?" }
   ]},
   medium: { lo: 250, hi: 750, items: [
-    {title: "Kitchen flood", story: "A washing machine hose burst overnight. The member's kitchen floor is ruined. The downstairs neighbor's ceiling is also damaged, and the neighbor wants the member to cover it.", dilemma: "The neighbor's damage is outside this policy. Should the pool pay it anyway to keep the peace?" },
-    {title: "Car fender-bender", story: "The member backed into a parked car in a grocery lot. The other driver left a note with a phone number. No one else saw it.", dilemma: "The member admits they were checking a text just before the crash. Should distracted driving change the payout?" },
-    {title: "Oxygen concentrator damaged", story: "A power surge damaged a home oxygen machine. The replacement costs $1,100. The member has a tight budget and cannot pay it alone.", dilemma: "Should financial hardship change the decision, or should every claim be treated the same?" },
-    {title: "Roommate's laptop spilled on", story: "The member's roommate spilled coffee on the roommate's own laptop. The member filed the claim under their own policy. The repair is $900.", dilemma: "The member does not own the laptop. Should the pool pay someone for property they don't own?" },
-    {title: "Phone damage photo", story: "A member submitted a photo of a water-damaged phone. The photo's timestamp is from last year. The member says the photo is from the new drop.", dilemma: "A fraud check flagged the photo. Should the pool trust the flag, or ask for more proof and risk treating an honest mistake as fraud?" },
-    {title: "Stolen bike from a gym rack", story: "A bike and helmet were stolen from a rack outside a gym. The member has a receipt for $650 but says the bike was used.", dilemma: "The receipt is from years ago. Should the pool pay replacement cost or the lower used value?" },
-    {title: "Water heater failure", story: "A water heater leaked into a basement, damaging stored boxes and a washing machine. The repair is $540.", dilemma: "The member hadn't serviced the heater in six years, though the manual suggests yearly checks. Should maintenance matter?" },
-    {title: "Mold in a rented apartment", story: "A tenant found mold along a bathroom wall and reported it to the pool. The repair is $700. The landlord says it's the tenant's job.", dilemma: "Who is responsible? Should the pool pay when the landlord may be the one who should?" },
-    {title: "Hail damage to a car", story: "Hail dented the hood and roof of a car. The estimate is $850. The member parked under a tree they knew dropped branches.", dilemma: "The member chose to park there. Does knowing the risk change the claim?" },
-    {title: "Broken wrist from a bike accident", story: "A member broke a wrist in a bike accident and paid a $780 urgent-care bill. They were wearing a helmet. A friend says they were riding in the dark without lights.", dilemma: "Should the pool cover injuries from risky behavior, or only accidents?" },
-    {title: "Lost family ring", story: "A member lost a family ring. The jeweler's appraisal is $900. The member has photos but no receipt.", dilemma: "Value is hard to prove without a receipt. Should the pool trust the appraisal?" },
-    {title: "Dishwasher leak warped the floor", story: "A dishwasher leaked and warped the wooden floor. The repair is $600. The member had a plumber install the dishwasher a month earlier.", dilemma: "The installer might be responsible. Should the pool pay first and go after the installer later?" }
+    {title: "Kitchen flood", policy: "partial", story: "A washing machine hose burst overnight. The member's kitchen floor is ruined. The downstairs neighbor's ceiling is also damaged, and the neighbor wants the member to cover it.", dilemma: "The neighbor's damage is outside this policy. Should the pool pay it anyway to keep the peace?" },
+    {title: "Car fender-bender", policy: "covered", story: "The member backed into a parked car in a grocery lot. The other driver left a note with a phone number. No one else saw it.", dilemma: "The member admits they were checking a text just before the crash. Should distracted driving change the payout?" },
+    {title: "Oxygen concentrator damaged", policy: "covered", story: "A power surge damaged a home oxygen machine. The replacement costs $1,100. The member has a tight budget and cannot pay it alone.", dilemma: "Should financial hardship change the decision, or should every claim be treated the same?" },
+    {title: "Roommate's laptop spilled on", policy: "excluded", story: "The member's roommate spilled coffee on the roommate's own laptop. The member filed the claim under their own policy. The repair is $900.", dilemma: "The member does not own the laptop. Should the pool pay someone for property they don't own?" },
+    {title: "Phone damage photo", policy: "covered", story: "A member submitted a photo of a water-damaged phone. The photo's timestamp is from last year. The member says the photo is from the new drop.", dilemma: "A fraud check flagged the photo. Should the pool trust the flag, or ask for more proof and risk treating an honest mistake as fraud?" },
+    {title: "Stolen bike from a gym rack", policy: "partial", story: "A bike and helmet were stolen from a rack outside a gym. The member has a receipt for $650 but says the bike was used.", dilemma: "The receipt is from years ago. Should the pool pay replacement cost or the lower used value?" },
+    {title: "Water heater failure", policy: "partial", story: "A water heater leaked into a basement, damaging stored boxes and a washing machine. The repair is $540.", dilemma: "The member hadn't serviced the heater in six years, though the manual suggests yearly checks. Should maintenance matter?" },
+    {title: "Mold in a rented apartment", policy: "excluded", story: "A tenant found mold along a bathroom wall and reported it to the pool. The repair is $700. The landlord says it's the tenant's job.", dilemma: "Who is responsible? Should the pool pay when the landlord may be the one who should?" },
+    {title: "Hail damage to a car", policy: "covered", story: "Hail dented the hood and roof of a car. The estimate is $850. The member parked under a tree they knew dropped branches.", dilemma: "The member chose to park there. Does knowing the risk change the claim?" },
+    {title: "Broken wrist from a bike accident", policy: "covered", story: "A member broke a wrist in a bike accident and paid a $780 urgent-care bill. They were wearing a helmet. A friend says they were riding in the dark without lights.", dilemma: "Should the pool cover injuries from risky behavior, or only accidents?" },
+    {title: "Lost family ring", policy: "excluded", story: "A member lost a family ring. The jeweler's appraisal is $900. The member has photos but no receipt.", dilemma: "Value is hard to prove without a receipt. Should the pool trust the appraisal?" },
+    {title: "Dishwasher leak warped the floor", policy: "covered", story: "A dishwasher leaked and warped the wooden floor. The repair is $600. The member had a plumber install the dishwasher a month earlier.", dilemma: "The installer might be responsible. Should the pool pay first and go after the installer later?" }
   ]},
   large: { lo: 1500, hi: 3000, items: [
-    {title: "Apartment fire", story: "A candle left burning in a bedroom started a fire. The member was out. Sprinklers kept the damage limited to one room.", dilemma: "The member admits the candle was lit after the landlord had warned about candles. Should carelessness reduce the payout?" },
-    {title: "Storm damage to the roof", story: "A windstorm tore part of the roof off. An inspection six months earlier had flagged the same area as loose, and the member did not repair it.", dilemma: "Was the delay neglect, or a reasonable choice about money? Should the pool pay in full, in part, or not at all?" },
-    {title: "Burst pipe ceiling collapse", story: "A frozen pipe burst and part of a ceiling collapsed. The member rents, and the landlord refuses to pay for repairs.", dilemma: "The landlord is legally responsible. Should the pool pay the member and go after the landlord, or leave the member to fight?" },
-    {title: "Flooded basement from a river", story: "A river flood reached the basement of a member's home, destroying the furnace and stored belongings. The member had not bought flood coverage.", dilemma: "The policy excludes flood damage. Should the pool pay anyway to stay in good standing, or hold the line?" }
+    {title: "Apartment fire", policy: "covered", story: "A candle left burning in a bedroom started a fire. The member was out. Sprinklers kept the damage limited to one room.", dilemma: "The member admits the candle was lit after the landlord had warned about candles. Should carelessness reduce the payout?" },
+    {title: "Storm damage to the roof", policy: "partial", story: "A windstorm tore part of the roof off. An inspection six months earlier had flagged the same area as loose, and the member did not repair it.", dilemma: "Was the delay neglect, or a reasonable choice about money? Should the pool pay in full, in part, or not at all?" },
+    {title: "Burst pipe ceiling collapse", policy: "covered", story: "A frozen pipe burst and part of a ceiling collapsed. The member rents, and the landlord refuses to pay for repairs.", dilemma: "The landlord is legally responsible. Should the pool pay the member and go after the landlord, or leave the member to fight?" },
+    {title: "Flooded basement from a river", policy: "excluded", story: "A river flood reached the basement of a member's home, destroying the furnace and stored belongings. The member had not bought flood coverage.", dilemma: "The policy excludes flood damage. Should the pool pay anyway to stay in good standing, or hold the line?" }
   ]}
 };
 const CLAIM_LABEL = { full: "Pay in full", half: "Pay half", deny: "Deny" };
@@ -254,7 +257,7 @@ function claimText(c) {
 }
 function makeClaim(tier, it) {
   const c = CLAIMS[tier];
-  return { id: rid(6), tier, desc: it.title, story: it.story, dilemma: it.dilemma || null, amt: rnd(c.lo, c.hi), decision: null };
+  return { id: rid(6), tier, desc: it.title, story: it.story, dilemma: it.dilemma || null, policy: it.policy, amt: rnd(c.lo, c.hi), decision: null };
 }
 // Draws this round's claims. Claims already used earlier in the game are skipped, so no claim repeats.
 function drawClaims(round, used) {
@@ -295,6 +298,15 @@ function collect() {
   saveState({ ...G, pool: G.pool + amt, premiumsIn: G.premiumsIn + amt, claims, used: [...used, ...claims.map(c => c.desc)], phase: "claims" });
 }
 function setClaim(id, d) { saveState({ ...G, claims: G.claims.map(c => (c.id === id ? { ...c, decision: d } : c)) }); }
+// Simplified claim policy. Covered claims are paid in full. Partly covered claims are paid
+// half. Excluded claims are denied.
+const POLICY_TEXT = { covered: "Covered", partial: "Partly covered", excluded: "Not covered" };
+function withinPolicy(policy, d) {
+  if (policy === "covered") return d === "full";
+  if (policy === "partial") return d === "half";
+  if (policy === "excluded") return d === "deny";
+  return true;
+}
 function effectiveClaim(c) { return c.decision || resolve(votesFor("claim-" + c.id), "half"); }
 function closeRound() {
   let paid = 0, withheld = 0, loss = 0, gain = 0;
@@ -307,7 +319,7 @@ function closeRound() {
     if (d === "full") gain += c.tier === "large" ? 6 : 3;   // members feel looked after
     if (d === "half") loss += c.tier === "large" ? 15 : 8;
     if (d === "deny") loss += c.tier === "large" ? 25 : 15;
-    decisions.push({ id: c.id, desc: c.desc, amt: c.amt, d, counts: cnt });
+    decisions.push({ id: c.id, desc: c.desc, amt: c.amt, d, counts: cnt, policy: c.policy, within: withinPolicy(c.policy, d) });
   }
   const pool = G.pool - paid;
   if (pool < 0) loss += 10;   // members lose trust while the pool is in the red
@@ -505,12 +517,18 @@ function logView() {
 function recapMain() {
   const r = G.recap;
   const planVotes = total(r.planCounts || {});
+  const inside = r.claims.filter(c => c.within).length;
   const claims = r.claims.length ? r.claims.map(c => `
     <div class="recap-claim">
       <div><strong>${esc(c.desc)}</strong> <span class="muted">${fmt(c.amt)}</span>
-        <div class="small muted">${CLAIM_KEYS.map(d => `${CLAIM_LABEL[d]} ${(c.counts && c.counts[d]) || 0}`).join(" · ")}</div></div>
-      <span class="chip chip-${c.d}">${CLAIM_LABEL[c.d]}</span>
+        <div class="small muted">${CLAIM_KEYS.map(d => `${CLAIM_LABEL[d]} ${(c.counts && c.counts[d]) || 0}`).join(" · ")}</div>
+        <div class="small">Policy: ${POLICY_TEXT[c.policy] || "Covered"}</div></div>
+      <div class="chips">
+        <span class="chip chip-${c.d}">${CLAIM_LABEL[c.d]}</span>
+        <span class="chip ${c.within ? "chip-in" : "chip-out"}">${c.within ? "Within policy" : "Outside policy"}</span>
+      </div>
     </div>`).join("") : `<p class="muted">No claims this round.</p>`;
+  const summary = r.claims.length ? `<p class="muted">${inside} of ${r.claims.length} decisions were within policy.</p>` : "";
   const change = r.trustTo - r.trustFrom;
   const trustBar = change !== 0
     ? `<div class="meter big-meter"><span style="--from:${r.trustFrom}%;--to:${r.trustTo}%;width:${r.trustTo}%;animation:trustDrop 1.6s ease-out both"></span></div>
@@ -523,7 +541,7 @@ function recapMain() {
     <h2 class="recap-title">Premium: ${PLANS[r.plan].label}, ${fmt(PLANS[r.plan].price)} per group</h2>
     <p class="muted">${planVotes ? `The agents' voted ${(r.planCounts[r.plan] || 0)} of ${planVotes} for this plan. ` : "The teacher chose this plan. "}${PLANS[r.plan].trust ? `This premium cost ${PLANS[r.plan].trust} trust.` : "This premium cost no trust."}</p>
     <div class="recap-grid">
-      <div><span class="label">Claims</span>${claims}</div>
+      <div><span class="label">Claims</span>${summary}${claims}</div>
       <div><span class="label">Member trust</span>${trustBar}
         <span class="label" style="margin-top:18px;display:block">Pool</span>
         <span class="big">${fmt(r.poolFrom)} → ${fmt(r.poolTo)}</span>
