@@ -158,7 +158,7 @@ const QR_HTML = IS_STUDENT ? "" : makeQr(JOIN_URL);
 
 function freshState(session) {
   return { session, status: "lobby", phase: "lobby", round: 1, members: 0, plan: "standard", pool: 0, trust: 100,
-           claims: [], premiumsIn: 0, paidOut: 0, withheld: 0, log: [], charity: null, giveback: 0, result: null, lostRound: null };
+           claims: [], premiumsIn: 0, paidOut: 0, withheld: 0, log: [], charity: null, giveback: 0, result: null };
 }
 // The page redraws every 2 seconds. Only redraw when the content changed, and keep
 // whatever someone is typing in an input, so typing isn't wiped out.
@@ -277,13 +277,14 @@ function closeRound() {
   const log = [{ round: G.round, plan: PLANS[G.plan].label, claims: G.claims.length,
                  collected: G.members * PLANS[G.plan].price, paid, withheld }, ...G.log];
   const base = { ...G, pool, paidOut: G.paidOut + paid, withheld: G.withheld + withheld, trust, log, claims: [] };
-  if (pool < 0) {
-    // The pool ran out of money: the class loses and the game ends.
-    saveState({ ...base, status: "done", phase: "result", result: "lost", lostRound: G.round });
+  const round = G.round + 1;
+  if (round > ROUNDS) {
+    // After the last round, the class wins if the pool is at $0 or above.
+    if (pool < 0) saveState({ ...base, round, status: "done", phase: "result", result: "lost" });
+    else saveState({ ...base, round, phase: "charity" });
     return;
   }
-  const round = G.round + 1;
-  saveState({ ...base, round, phase: round > ROUNDS ? "charity" : "price" });
+  saveState({ ...base, round, phase: "price" });
 }
 function setCharity(i) { saveState({ ...G, charity: CHARITIES[i] }); }
 function reveal() {
@@ -415,7 +416,7 @@ function charityMain() {
   return `
     <span class="label">Year complete</span>
     <h2>Where does the leftover go?</h2>
-    <p>The pool keeps ${fmt(TARGET)} as a reserve. Anything above that goes to the cause the class picks. The pool has to stay at $0 or above through round ${ROUNDS} to win.</p>
+    <p>The pool keeps ${fmt(TARGET)} as a reserve. Anything above that goes to the cause the class picks. The class wins if the pool is at $0 or above after round ${ROUNDS}.</p>
     <div class="choices three">
       ${CHARITIES.map((c, i) => `<button class="choice" aria-pressed="${G.charity === c}" onclick="setCharity(${i})">${esc(c)}<br><span class="small muted">${cc[String(i)] || 0} vote${cc[String(i)] === 1 ? "" : "s"}</span></button>`).join("")}
     </div>
@@ -426,7 +427,7 @@ function charityMain() {
 }
 function doneMain() {
   let verdict;
-  if (G.result === "lost") verdict = `The class lost. The pool ran out of money in round ${G.lostRound}.`;
+  if (G.result === "lost") verdict = `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`;
   else if (G.giveback > 0) verdict = `The class won. ${fmt(G.giveback)} went to the ${esc(G.charity.toLowerCase())}.`;
   else verdict = "The class won. The pool made it to round 12, but there was nothing left to give back.";
   const qs = [
@@ -499,7 +500,7 @@ function renderStudent() {
       body = `<span class="label">You're in as ${name}</span><h2>Waiting to start</h2><p>Keep this page open. The teacher will start the game shortly.</p>`;
     } else if (G.status === "done") {
       body = `<span class="label">Final result</span><h2>Giveback complete</h2>
-        <p class="verdict">${G.result === "lost" ? `The class lost. The pool ran out of money in round ${G.lostRound}.` : G.giveback > 0 ? "The class won. " + fmt(G.giveback) + " went to the " + esc(G.charity.toLowerCase()) + "." : "The class won, but there was nothing left to give back."}</p>
+        <p class="verdict">${G.result === "lost" ? `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.` : G.giveback > 0 ? "The class won. " + fmt(G.giveback) + " went to the " + esc(G.charity.toLowerCase()) + "." : "The class won, but there was nothing left to give back."}</p>
         <div class="kv"><span>Pool members</span><span>${G.members}</span></div>
         <div class="kv"><span>Final member trust</span><span>${G.trust}/100</span></div>`;
     } else if (G.phase === "price") {
