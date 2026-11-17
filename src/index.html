@@ -271,7 +271,8 @@ function drawClaims(round, used) {
   };
   const claims = [];
   const x = Math.random();
-  const n = x < 0.25 ? 0 : x < 0.75 ? 1 : 2;   // about one claim per round on average
+  let n = x < 0.25 ? 0 : x < 0.75 ? 1 : 2;   // about one claim per round on average
+  if (round === 1 && n === 0) n = 1;           // round 1 always has a claim
   for (let i = 0; i < n; i++) {
     const tier = Math.random() < 0.4 ? "small" : "medium";
     const c = take(tier) || take(tier === "small" ? "medium" : "small");
