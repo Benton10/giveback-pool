@@ -10,6 +10,7 @@ const json = (data, status = 200) =>
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
 
+const MAX_GROUPS = 5;
 const PLAN_KEYS = ["low", "standard", "high"];
 const CLAIM_KEYS = ["full", "half", "deny"];
 const ID_RE = /^[a-z0-9]{6,40}$/;
@@ -62,6 +63,14 @@ async function join(request, env) {
   const state = await loadState(env);
   if (!state) return json({ error: "no_game" }, 409);
   if (state.status !== "lobby") return json({ error: "already_started" }, 409);
+  // Only MAX_GROUPS groups can join. A group that already joined may rejoin.
+  const seen = await env.DB.prepare("SELECT 1 AS x FROM players WHERE pid = ? AND session = ?")
+    .bind(pid, state.session).first();
+  if (!seen) {
+    const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM players WHERE session = ?")
+      .bind(state.session).first();
+    if (count.n >= MAX_GROUPS) return json({ error: "class_full" }, 409);
+  }
   await env.DB.prepare(
     "INSERT INTO players (pid, session, name, joined) VALUES (?, ?, ?, ?) " +
     "ON CONFLICT(pid) DO UPDATE SET session = excluded.session, name = excluded.name, joined = excluded.joined"

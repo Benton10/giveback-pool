@@ -306,7 +306,11 @@ async function join() {
   const name = (($("nm") && $("nm").value) || "").trim().slice(0, 24);
   if (!name) return;
   try { await api("/join", { method: "POST", body: { pid: PID, name } }); poll(); }
-  catch (e) { notice(e.status === 409 ? "The class has already started. Ask your teacher for the next game." : "Could not join: " + e.message); }
+  catch (e) {
+    notice(e.message === "class_full" ? "This class already has its five groups. Ask your teacher if your group should join."
+      : e.status === 409 ? "The class has already started. Ask your teacher for the next game."
+      : "Could not join: " + e.message);
+  }
 }
 async function vote(kind, choice) {
   try { await api("/vote", { method: "POST", body: { pid: PID, kind, choice: String(choice) } }); poll(); }
@@ -352,7 +356,7 @@ function lobbyMain() {
     <div>
       <span class="label">Students scan the code or open</span>
       <p class="url">${esc(JOIN_URL)}</p>
-      <h2>${r.length} joined</h2><p class="hint">Each group should join on one phone.</p>
+      <h2>${r.length} of 5 groups joined</h2><p class="hint">Each group should join on one phone. The game takes up to five groups.</p>
       <ul class="roster">${r.map(p => `<li>${esc(p.name)}</li>`).join("") || '<li class="muted">Waiting for students to scan the code.</li>'}</ul>
       <div class="actions">
         <button class="primary" onclick="startGame()" ${r.length ? "" : "disabled"}>Start with ${r.length} group${r.length === 1 ? "" : "s"}</button>
