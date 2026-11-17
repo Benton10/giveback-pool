@@ -80,6 +80,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .verdict { font-family: var(--display); font-size: 20px; margin: 8px 0 14px; }
 .story { margin: 6px 0 0; color: var(--muted); font-size: 14px; max-width: 70ch; }
 .dilemma { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--warn); background: var(--surface); border-radius: 6px; font-size: 14px; max-width: 70ch; }
+@keyframes trustDrop { from { width: var(--from); } to { width: var(--to); } }
+.recap-card { padding: 28px; }
+.recap-title { font-size: 34px; margin: 6px 0 4px; }
+.recap-grid { display: grid; gap: 28px; grid-template-columns: 1fr; margin-top: 22px; }
+@media (min-width: 760px) { .recap-grid { grid-template-columns: 1fr 1fr; } }
+.recap-claim { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.recap-claim strong { font-size: 18px; }
+.chip { font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 99px; white-space: nowrap; }
+.chip-full { background: var(--good); color: #fff; }
+.chip-half { background: var(--warn); color: #fff; }
+.chip-deny { background: var(--bad); color: #fff; }
+.big-meter { height: 22px; }
+.drop { font-family: var(--display); font-size: 22px; margin-top: 10px; }
 .lobby { display: grid; gap: 20px; grid-template-columns: 1fr; }
 @media (min-width: 640px) { .lobby { grid-template-columns: 260px 1fr; align-items: start; } }
 .qr img { width: 100%; max-width: 240px; height: auto; background: #fff; padding: 8px; border-radius: 12px; }
@@ -267,25 +280,33 @@ function setClaim(id, d) { saveState({ ...G, claims: G.claims.map(c => (c.id ===
 function effectiveClaim(c) { return c.decision || resolve(votesFor("claim-" + c.id), "half"); }
 function closeRound() {
   let paid = 0, withheld = 0, loss = 0;
+  const decisions = [];
   for (const c of G.claims) {
+    const cnt = votesFor("claim-" + c.id);
     const d = effectiveClaim(c) || "half";
     const p = d === "full" ? c.amt : d === "half" ? c.amt / 2 : 0;
     paid += p; withheld += c.amt - p;
     if (d === "half") loss += 3;
     if (d === "deny") loss += c.tier === "large" ? 12 : 8;
+    decisions.push({ id: c.id, desc: c.desc, amt: c.amt, d, counts: cnt });
   }
   const pool = G.pool - paid, trust = Math.max(0, G.trust - loss);
   const log = [{ round: G.round, plan: PLANS[G.plan].label, claims: G.claims.length,
                  collected: G.members * PLANS[G.plan].price, paid, withheld }, ...G.log];
-  const base = { ...G, pool, paidOut: G.paidOut + paid, withheld: G.withheld + withheld, trust, log, claims: [] };
+  const recap = { round: G.round, plan: G.plan, planCounts: votesFor("plan"), claims: decisions,
+                  trustFrom: G.trust, trustTo: trust, poolFrom: G.pool, poolTo: pool, paid, withheld };
+  saveState({ ...G, pool, paidOut: G.paidOut + paid, withheld: G.withheld + withheld, trust, log,
+              claims: [], phase: "recap", recap });
+}
+function nextRound() {
   const round = G.round + 1;
   if (round > ROUNDS) {
-    // After the last round, the class wins if the pool is at $0 or above.
-    if (pool < 0) saveState({ ...base, round, status: "done", phase: "result", result: "lost" });
-    else saveState({ ...base, round, phase: "charity" });
+    // After the last round: lost if the pool is below $0, otherwise the class picks a cause.
+    if (G.pool < 0) saveState({ ...G, round, status: "done", phase: "result", result: "lost", recap: null });
+    else saveState({ ...G, round, phase: "charity", recap: null });
     return;
   }
-  saveState({ ...base, round, phase: "price" });
+  saveState({ ...G, round, phase: "price", recap: null });
 }
 function setCharity(i) { saveState({ ...G, charity: CHARITIES[i] }); }
 function reveal() {
@@ -455,7 +476,42 @@ function logView() {
     </li>`).join("");
   return `<div class="card"><span class="label">Round log</span><ul class="log" style="margin-top:10px">${items}</ul></div>`;
 }
+function recapMain() {
+  const r = G.recap;
+  const delta = r.trustFrom - r.trustTo;
+  const planVotes = total(r.planCounts || {});
+  const claims = r.claims.length ? r.claims.map(c => `
+    <div class="recap-claim">
+      <div><strong>${esc(c.desc)}</strong> <span class="muted">${fmt(c.amt)}</span>
+        <div class="small muted">${CLAIM_KEYS.map(d => `${CLAIM_LABEL[d]} ${(c.counts && c.counts[d]) || 0}`).join(" · ")}</div></div>
+      <span class="chip chip-${c.d}">${CLAIM_LABEL[c.d]}</span>
+    </div>`).join("") : `<p class="muted">No claims this round.</p>`;
+  const trustBar = delta > 0
+    ? `<div class="meter big-meter"><span style="--from:${r.trustFrom}%;--to:${r.trustTo}%;width:${r.trustTo}%;animation:trustDrop 1.6s ease-out both"></span></div>
+       <p class="drop">Trust down ${delta} points</p>`
+    : `<div class="meter big-meter"><span style="width:${r.trustTo}%"></span></div>
+       <p class="drop">Trust held steady</p>`;
+  return `
+  <div class="recap">
+    <span class="label">Round ${r.round} results</span>
+    <h2 class="recap-title">Premium: ${PLANS[r.plan].label}, ${fmt(PLANS[r.plan].price)} per group</h2>
+    <p class="muted">${planVotes ? `The class voted ${(r.planCounts[r.plan] || 0)} of ${planVotes} for this plan.` : "The teacher chose this plan."}</p>
+    <div class="recap-grid">
+      <div><span class="label">Claims</span>${claims}</div>
+      <div><span class="label">Member trust</span>${trustBar}
+        <span class="label" style="margin-top:18px;display:block">Pool</span>
+        <span class="big">${fmt(r.poolFrom)} → ${fmt(r.poolTo)}</span>
+      </div>
+    </div>
+    <div class="actions"><button class="primary" onclick="nextRound()">${r.round === ROUNDS ? "See the final result" : "Next round"}</button></div>
+  </div>`;
+}
 function renderTeacher() {
+  if (G.phase === "recap" && G.recap) {
+    appEl.innerHTML = `<header class="top wide"><div><span class="label">Giveback Pool · Teacher</span><h1>Round ${G.recap.round} of ${ROUNDS}</h1></div></header>
+      <div class="stack wide">${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}<div class="card recap-card">${recapMain()}</div></div>`;
+    return;
+  }
   if (!IS_HOST) {
     appEl.innerHTML = `
       <div class="card wide" style="max-width:520px">
@@ -519,6 +575,9 @@ function renderStudent() {
             <div class="decide">${CLAIM_KEYS.map(d => `<button aria-pressed="${m === d}" onclick="vote('claim-${c.id}','${d}')">${CLAIM_LABEL[d]}</button>`).join("")}</div>
           </div>`;
         }).join("") : `<p class="muted">No claims this round. Wait for the teacher to continue.</p>`}`;
+    } else if (G.phase === "recap") {
+      body = `<span class="label">Round ${G.recap ? G.recap.round : G.round} is over</span><h2>Watch the teacher's screen</h2>
+        <p>The results are on the projector. The next round starts soon.</p>`;
     } else {
       const m = myChoice("charity");
       body = `<span class="label">Year complete</span><h2>Pick a cause</h2>
@@ -547,7 +606,7 @@ function render() {
   if (IS_STUDENT) renderStudent(); else renderTeacher();
 }
 
-Object.assign(window, { startGame, newClass, restartGame, setPlan, useMajority, collect, setClaim, closeRound, setCharity, reveal, join, vote, saveCode });
+Object.assign(window, { startGame, newClass, restartGame, nextRound, setPlan, useMajority, collect, setClaim, closeRound, setCharity, reveal, join, vote, saveCode });
 
 // Students and the teacher both poll; the server decides what each may see.
 poll();
