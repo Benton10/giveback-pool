@@ -291,7 +291,12 @@ function restartGame() {
   if (confirm("Start over? This ends the current game and clears the roster. Students will need to rejoin.")) newClass();
 }
 function setPlan(p) { if (G.phase === "price") saveState({ ...G, plan: p }); }
-function useMajority() { const r = resolve(votesFor("plan"), null); if (r) setPlan(r); }
+function useMajority() {
+  const r = resolve(votesFor("plan"), null);
+  if (!r) { notice("No plan votes yet. Wait for the groups to vote."); return; }
+  notice(`The agents chose ${PLANS[r].label}.`);
+  setPlan(r);
+}
 function collect() {
   const amt = G.members * PLANS[G.plan].price;
   const used = G.used || [];
@@ -435,7 +440,7 @@ function priceMain() {
         </button>`).join("")}
     </div>
     <div class="actions">
-      <button class="ghost" onclick="useMajority()" ${leader ? "" : "disabled"}>Use the agents' vote</button>
+      <button class="ghost" onclick="useMajority()">Use the agents' vote</button>
       <button class="primary" onclick="collect()">Collect premiums and open claims</button>
       <span class="hint">${voted} of ${G.members} groups voted. Collects ${fmt(G.members * PLANS[G.plan].price)}.</span>
     </div>`;
