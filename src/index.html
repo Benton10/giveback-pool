@@ -138,7 +138,7 @@ const IS_STUDENT = location.pathname.replace(/\/+$/, "").endsWith("/join");
 const JOIN_URL = location.origin + "/join";
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const fmt = n => "$" + Math.round(n).toLocaleString("en-US");
+const fmt = n => (n < 0 ? "-$" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US");
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const rnd = (lo, hi) => Math.round(lo + Math.random() * (hi - lo));
 const rid = (n = 8) => Array.from({ length: n }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("");
@@ -158,7 +158,7 @@ const QR_HTML = IS_STUDENT ? "" : makeQr(JOIN_URL);
 
 function freshState(session) {
   return { session, status: "lobby", phase: "lobby", round: 1, members: 0, plan: "standard", pool: 0, trust: 100,
-           claims: [], premiumsIn: 0, paidOut: 0, withheld: 0, topups: 0, log: [], charity: null, giveback: 0 };
+           claims: [], premiumsIn: 0, paidOut: 0, withheld: 0, log: [], charity: null, giveback: 0, result: null, lostRound: null };
 }
 // The page redraws every 2 seconds. Only redraw when the content changed, and keep
 // whatever someone is typing in an input, so typing isn't wiped out.
@@ -273,21 +273,25 @@ function closeRound() {
     if (d === "half") loss += 3;
     if (d === "deny") loss += c.tier === "large" ? 12 : 8;
   }
-  let pool = G.pool - paid, topups = G.topups, trust = Math.max(0, G.trust - loss), topup = 0;
-  if (pool < 0) { topup = -pool; pool = 0; topups += topup; trust = Math.max(0, trust - 10); }
+  const pool = G.pool - paid, trust = Math.max(0, G.trust - loss);
   const log = [{ round: G.round, plan: PLANS[G.plan].label, claims: G.claims.length,
-                 collected: G.members * PLANS[G.plan].price, paid, withheld, topup }, ...G.log];
+                 collected: G.members * PLANS[G.plan].price, paid, withheld }, ...G.log];
+  const base = { ...G, pool, paidOut: G.paidOut + paid, withheld: G.withheld + withheld, trust, log, claims: [] };
+  if (pool < 0) {
+    // The pool ran out of money: the class loses and the game ends.
+    saveState({ ...base, status: "done", phase: "result", result: "lost", lostRound: G.round });
+    return;
+  }
   const round = G.round + 1;
-  saveState({ ...G, pool, paidOut: G.paidOut + paid, withheld: G.withheld + withheld, topups, trust, log,
-              round, phase: round > ROUNDS ? "charity" : "price", claims: [] });
+  saveState({ ...base, round, phase: round > ROUNDS ? "charity" : "price" });
 }
 function setCharity(i) { saveState({ ...G, charity: CHARITIES[i] }); }
 function reveal() {
   const r = resolve(votesFor("charity"), null);
   const charity = G.charity || (r !== null ? CHARITIES[Number(r)] : null);
   if (!charity) return;
-  const giveback = G.topups > 0 ? 0 : Math.max(0, G.pool - TARGET);
-  saveState({ ...G, charity, giveback, pool: G.pool - giveback, status: "done", phase: "result" });
+  const giveback = Math.max(0, G.pool - TARGET);
+  saveState({ ...G, charity, giveback, pool: G.pool - giveback, status: "done", phase: "result", result: "won" });
 }
 function saveCode() {
   const v = ($("code") && $("code").value || "").trim();
@@ -326,7 +330,6 @@ function rail() {
       <div class="kv"><span>Premiums in</span><span>${fmt(G.premiumsIn)}</span></div>
       <div class="kv"><span>Paid out</span><span>${fmt(G.paidOut)}</span></div>
       <div class="kv"><span>Withheld</span><span>${fmt(G.withheld)}</span></div>
-      <div class="kv"><span>Member top-ups</span><span>${fmt(G.topups)}</span></div>
     </div>
     <div class="card">
       <span class="label">Members in this pool</span>
@@ -412,7 +415,7 @@ function charityMain() {
   return `
     <span class="label">Year complete</span>
     <h2>Where does the leftover go?</h2>
-    <p>The pool keeps ${fmt(TARGET)} as a reserve. Anything above that goes to the cause the class picks. If members had to top up, there is nothing to give back.</p>
+    <p>The pool keeps ${fmt(TARGET)} as a reserve. Anything above that goes to the cause the class picks. The pool has to stay at $0 or above through round ${ROUNDS} to win.</p>
     <div class="choices three">
       ${CHARITIES.map((c, i) => `<button class="choice" aria-pressed="${G.charity === c}" onclick="setCharity(${i})">${esc(c)}<br><span class="small muted">${cc[String(i)] || 0} vote${cc[String(i)] === 1 ? "" : "s"}</span></button>`).join("")}
     </div>
@@ -423,9 +426,9 @@ function charityMain() {
 }
 function doneMain() {
   let verdict;
-  if (G.topups > 0) verdict = "Members had to top up, so the pool gave nothing back.";
-  else if (G.giveback > 0) verdict = `${fmt(G.giveback)} went to the ${esc(G.charity.toLowerCase())}.`;
-  else verdict = "The pool only covered its claims. Nothing was left to give back.";
+  if (G.result === "lost") verdict = `The class lost. The pool ran out of money in round ${G.lostRound}.`;
+  else if (G.giveback > 0) verdict = `The class won. ${fmt(G.giveback)} went to the ${esc(G.charity.toLowerCase())}.`;
+  else verdict = "The class won. The pool made it to round 12, but there was nothing left to give back.";
   const qs = [
     "Which premium plan did the class pick, and what made you choose it?",
     "When you denied or cut a claim, what happened to member trust? Who paid the cost?",
@@ -449,7 +452,7 @@ function logView() {
   const items = G.log.map(e => `
     <li>
       <div><strong>Round ${e.round}</strong> <span class="muted">${e.plan} plan</span></div>
-      <div class="when">Collected ${fmt(e.collected)} · ${e.claims} claim${e.claims === 1 ? "" : "s"} · Paid ${fmt(e.paid)} · Withheld ${fmt(e.withheld)}${e.topup ? ` · Top-up ${fmt(e.topup)}` : ""}</div>
+      <div class="when">Collected ${fmt(e.collected)} · ${e.claims} claim${e.claims === 1 ? "" : "s"} · Paid ${fmt(e.paid)} · Withheld ${fmt(e.withheld)}</div>
     </li>`).join("");
   return `<div class="card"><span class="label">Round log</span><ul class="log" style="margin-top:10px">${items}</ul></div>`;
 }
@@ -496,7 +499,7 @@ function renderStudent() {
       body = `<span class="label">You're in as ${name}</span><h2>Waiting to start</h2><p>Keep this page open. The teacher will start the game shortly.</p>`;
     } else if (G.status === "done") {
       body = `<span class="label">Final result</span><h2>Giveback complete</h2>
-        <p class="verdict">${G.topups > 0 ? "Members had to top up, so the pool gave nothing back." : G.giveback > 0 ? fmt(G.giveback) + " went to the " + esc(G.charity.toLowerCase()) + "." : "Nothing was left to give back."}</p>
+        <p class="verdict">${G.result === "lost" ? `The class lost. The pool ran out of money in round ${G.lostRound}.` : G.giveback > 0 ? "The class won. " + fmt(G.giveback) + " went to the " + esc(G.charity.toLowerCase()) + "." : "The class won, but there was nothing left to give back."}</p>
         <div class="kv"><span>Pool members</span><span>${G.members}</span></div>
         <div class="kv"><span>Final member trust</span><span>${G.trust}/100</span></div>`;
     } else if (G.phase === "price") {
