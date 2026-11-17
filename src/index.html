@@ -95,13 +95,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 <script>
 const TARGET = 1000, ROUNDS = 12, START_POOL = 1000;
 const PLANS = {
-  low:      { label: "Low",      price: 30, note: "Cheapest for members. Little cushion if a big claim lands." },
-  standard: { label: "Standard", price: 50, note: "Balanced. Works if claims stay near the average." },
-  high:     { label: "High",     price: 80, note: "Builds a cushion. Members pay more each round." }
+  low:      { label: "Low",      price: 100, note: "Cheapest for groups. Little cushion if a big claim lands." },
+  standard: { label: "Standard", price: 150, note: "Balanced. Works if claims stay near the average." },
+  high:     { label: "High",     price: 250, note: "Builds a cushion. Groups pay more each round." }
 };
 const CHARITIES = ["Local food bank", "Animal shelter", "Youth reading program"];
 const CLAIMS = {
-  small: { lo: 80, hi: 400, items: [
+  small: { lo: 50, hi: 240, items: [
     { title: "Phone screen cracked", story: "A member dropped their phone on the sidewalk. The repair quote came back at $180." },
     { title: "Bike stolen", story: "The bike was locked with a cable lock. The member says the lock was cut. The bike was about three years old.",
       dilemma: "The policy pays for theft only when the lock was cut. Should the pool take the member's word for it?" },
@@ -110,7 +110,7 @@ const CLAIMS = {
     { title: "Lost luggage on a trip", story: "An airline lost a suitcase for four days. The member bought clothes and toiletries, $240 in total, and kept every receipt.",
       dilemma: "One receipt is for a $60 video game. Should the pool pay for it?" }
   ]},
-  medium: { lo: 500, hi: 1500, items: [
+  medium: { lo: 300, hi: 900, items: [
     { title: "Kitchen flood", story: "A washing machine hose burst overnight. The member's kitchen floor is ruined. The downstairs neighbor's ceiling is also damaged, and the neighbor wants the member to cover it.",
       dilemma: "The neighbor's damage is outside this policy. Should the pool pay it anyway to keep the peace?" },
     { title: "Car fender-bender", story: "The member backed into a parked car in a grocery lot. The other driver left a note with a phone number. No one else saw it.",
@@ -122,7 +122,7 @@ const CLAIMS = {
     { title: "Phone damage photo", story: "A member submitted a photo of a water-damaged phone. The photo's timestamp is from last year. The member says the photo is from the new drop.",
       dilemma: "A fraud check flagged the photo. Should the pool trust the flag, or ask the member for more proof and risk treating an honest mistake as fraud?" }
   ]},
-  large: { lo: 3000, hi: 6000, items: [
+  large: { lo: 1800, hi: 3600, items: [
     { title: "Apartment fire", story: "A candle left burning in a bedroom started a fire. The member was out. Sprinklers kept the damage limited to one room.",
       dilemma: "The member admits the candle was lit after the landlord had warned about candles. Should carelessness reduce the payout?" },
     { title: "Storm damage to the roof", story: "A windstorm tore part of the roof off. An inspection six months earlier had flagged the same area as loose, and the member did not repair it.",
@@ -335,7 +335,7 @@ function rail() {
     <div class="card">
       <span class="label">Members in this pool</span>
       <span class="big">${G.members}</span>
-      <span class="muted">Sized to the students who joined at the start.</span>
+      <span class="muted">Groups in the pool, counted when the game started.</span>
     </div>
     <div class="card">
       <button class="ghost" onclick="restartGame()" style="width:100%">Start over</button>
@@ -351,12 +351,12 @@ function lobbyMain() {
     <div>
       <span class="label">Students scan the code or open</span>
       <p class="url">${esc(JOIN_URL)}</p>
-      <h2>${r.length} joined</h2>
+      <h2>${r.length} joined</h2><p class="hint">Each group should join on one phone.</p>
       <ul class="roster">${r.map(p => `<li>${esc(p.name)}</li>`).join("") || '<li class="muted">Waiting for students to scan the code.</li>'}</ul>
       <div class="actions">
-        <button class="primary" onclick="startGame()" ${r.length ? "" : "disabled"}>Start with ${r.length} member${r.length === 1 ? "" : "s"}</button>
+        <button class="primary" onclick="startGame()" ${r.length ? "" : "disabled"}>Start with ${r.length} group${r.length === 1 ? "" : "s"}</button>
       </div>
-      <p class="hint" style="margin-top:12px">The pool is sized to the students who have joined when you start. Anyone who joins later waits for the next game.</p>
+      <p class="hint" style="margin-top:12px">The pool is sized to the groups that have joined when you start. Anyone who joins later waits for the next game.</p>
     </div>
   </div>`;
 }
@@ -372,14 +372,14 @@ function priceMain() {
       ${Object.entries(PLANS).map(([k, p]) => `
         <button class="opt" aria-pressed="${G.plan === k}" onclick="setPlan('${k}')">
           <strong>${p.label}</strong>
-          <span class="price">${fmt(p.price)} per member</span>
+          <span class="price">${fmt(p.price)} per group</span>
           <div class="muted small" style="margin-top:4px">${pc[k] || 0} vote${pc[k] === 1 ? "" : "s"}</div>
         </button>`).join("")}
     </div>
     <div class="actions">
       <button class="ghost" onclick="useMajority()" ${leader ? "" : "disabled"}>Use class vote</button>
       <button class="primary" onclick="collect()">Collect premiums and open claims</button>
-      <span class="hint">${voted} of ${G.members} students voted. Collects ${fmt(G.members * PLANS[G.plan].price)}.</span>
+      <span class="hint">${voted} of ${G.members} groups voted. Collects ${fmt(G.members * PLANS[G.plan].price)}.</span>
     </div>`;
 }
 function claimsMain() {
