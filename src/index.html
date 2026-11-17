@@ -103,7 +103,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .joinrow input { font: inherit; flex: 1 1 180px; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
 </style>
 
-<div class="wrap" id="app"><p class="muted">Connecting to the class…</p></div>
+<div class="wrap" id="app"><p class="muted">Connecting to the claim agents…</p></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 const ROUNDS = 12, START_POOL = 1000;
@@ -168,7 +168,7 @@ let G = null, LOADED = false, IS_HOST = false, NOTICE = "";
 let PLAYERS = [], BALLOTS = [], MY = [], ME = null;
 
 function makeQr(text) {
-  try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createImgTag(6, 8, "QR code to join the class"); }
+  try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createImgTag(6, 8, "QR code to join the claim agents"); }
   catch (e) { return `<p class="muted">Open ${esc(text)}</p>`; }
 }
 const QR_HTML = IS_STUDENT ? "" : makeQr(JOIN_URL);
@@ -327,7 +327,7 @@ function nextRound() {
     return;
   }
   if (round > ROUNDS) {
-    // After the last round: lost if the pool is below $0, otherwise the class picks a cause.
+    // After the last round: lost if the pool is below $0, otherwise the claim agents picks a cause.
     if (G.pool < 0) saveState({ ...G, round, status: "done", phase: "result", result: "lost", lostReason: "pool", recap: null });
     else saveState({ ...G, round, phase: "charity", recap: null });
     return;
@@ -354,8 +354,8 @@ async function join() {
   if (!name) return;
   try { await api("/join", { method: "POST", body: { pid: PID, name } }); poll(); }
   catch (e) {
-    notice(e.message === "class_full" ? "This class already has its five groups. Ask your teacher if your group should join."
-      : e.status === 409 ? "The class has already started. Ask your teacher for the next game."
+    notice(e.message === "class_full" ? "The claim agents already have their five groups. Ask your teacher if your group should join."
+      : e.status === 409 ? "The claim agents has already started. Ask your teacher for the next game."
       : "Could not join: " + e.message);
   }
 }
@@ -412,7 +412,7 @@ function priceMain() {
   return `
     <span class="label">Round ${G.round} of ${ROUNDS}</span>
     <h2>Set the premium</h2>
-    <p>Students vote on their phones. Use the class vote, or pick a plan yourself.</p>
+    <p>Students vote on their phones. Use the agents' vote, or pick a plan yourself.</p>
     <div class="plans">
       ${Object.entries(PLANS).map(([k, p]) => `
         <button class="opt" aria-pressed="${G.plan === k}" onclick="setPlan('${k}')">
@@ -422,7 +422,7 @@ function priceMain() {
         </button>`).join("")}
     </div>
     <div class="actions">
-      <button class="ghost" onclick="useMajority()" ${leader ? "" : "disabled"}>Use class vote</button>
+      <button class="ghost" onclick="useMajority()" ${leader ? "" : "disabled"}>Use the agents' vote</button>
       <button class="primary" onclick="collect()">Collect premiums and open claims</button>
       <span class="hint">${voted} of ${G.members} groups voted. Collects ${fmt(G.members * PLANS[G.plan].price)}.</span>
     </div>`;
@@ -432,14 +432,14 @@ function claimsMain() {
   const cards = G.claims.length ? G.claims.map(c => {
     const cnt = votesFor("claim-" + c.id);
     const eff = effectiveClaim(c);
-    const note = c.decision ? "Teacher decision set." : eff ? "Will use the class vote (ties count as pay half)." : "Waiting for votes or a decision.";
+    const note = c.decision ? "Teacher decision set." : eff ? "Will use the agents' vote (ties count as pay half)." : "Waiting for votes or a decision.";
     return `
     <div class="claim">
       <div class="claim-head">
         <div><span class="tag">${c.tier} claim</span><br><strong>${esc(c.desc)}</strong>${claimText(c)}</div>
         <span class="amt">${fmt(c.amt)}</span>
       </div>
-      <p class="hint" style="margin-top:8px">Class votes: ${CLAIM_KEYS.map(d => `${CLAIM_LABEL[d]} ${cnt[d] || 0}`).join(" · ")} (${total(cnt)} of ${G.members})</p>
+      <p class="hint" style="margin-top:8px">Agent votes: ${CLAIM_KEYS.map(d => `${CLAIM_LABEL[d]} ${cnt[d] || 0}`).join(" · ")} (${total(cnt)} of ${G.members})</p>
       <div class="decide">${CLAIM_KEYS.map(d => `<button aria-pressed="${c.decision === d}" onclick="setClaim('${c.id}','${d}')">${CLAIM_LABEL[d]}</button>`).join("")}</div>
       <p class="hint" style="margin-top:8px">${note}</p>
     </div>`;
@@ -447,7 +447,7 @@ function claimsMain() {
   return `
     <span class="label">Round ${G.round} of ${ROUNDS}</span>
     <h2>Decide the claims</h2>
-    <p>Students vote on each claim. Click a decision to override the class vote.</p>
+    <p>Students vote on each claim. Click a decision to override the agents' vote.</p>
     ${cards}
     <div class="actions">
       <button class="primary" onclick="closeRound()" ${ready ? "" : "disabled"}>Close round</button>
@@ -461,22 +461,22 @@ function charityMain() {
   return `
     <span class="label">Year complete</span>
     <h2>Where does the leftover go?</h2>
-    <p>The class wins if the pool is at $0 or above after round ${ROUNDS}. If it ends above $0, ${DONATE_PCT}% is hypothetically donated to the cause the class picks.</p>
+    <p>The claim agents wins if the pool is at $0 or above after round ${ROUNDS}. If it ends above $0, ${DONATE_PCT}% is hypothetically donated to the cause the claim agents picks.</p>
     <div class="choices three">
       ${CHARITIES.map((c, i) => `<button class="choice" aria-pressed="${G.charity === c}" onclick="setCharity(${i})">${esc(c)}<br><span class="small muted">${cc[String(i)] || 0} vote${cc[String(i)] === 1 ? "" : "s"}</span></button>`).join("")}
     </div>
     <div class="actions">
       <button class="primary" onclick="reveal()" ${ready ? "" : "disabled"}>Reveal the giveback</button>
-      <span class="hint">${G.charity ? "Teacher pick set." : r !== null ? "Will use the class vote." : "Waiting for votes or a pick."}</span>
+      <span class="hint">${G.charity ? "Teacher pick set." : r !== null ? "Will use the agents' vote." : "Waiting for votes or a pick."}</span>
     </div>`;
 }
 function doneMain() {
   let verdict;
-  if (G.result === "lost") verdict = G.lostReason === "trust" ? "The class lost. Member trust hit zero." : `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`;
-  else if (G.giveback > 0) verdict = `The class won. ${fmt(G.giveback)} was hypothetically donated to the ${esc(G.charity.toLowerCase())}.`;
-  else verdict = "The class won, with the pool at $0 after round 12, so nothing was donated.";
+  if (G.result === "lost") verdict = G.lostReason === "trust" ? "The claim agents lost. Member trust hit zero." : `The claim agents lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`;
+  else if (G.giveback > 0) verdict = `The claim agents won. ${fmt(G.giveback)} was hypothetically donated to the ${esc(G.charity.toLowerCase())}.`;
+  else verdict = "The claim agents won, with the pool at $0 after round 12, so nothing was donated.";
   const qs = [
-    "Which premium plan did the class pick, and what made you choose it?",
+    "Which premium plan did the claim agents pick, and what made you choose it?",
     "When you denied or cut a claim, what happened to member trust? Who paid the cost?",
     "If you knew the outcome before a claim, would the pool still be insurance?",
     "Should unused premium go back to members, to a cause, or stay in reserve? Why?",
@@ -491,7 +491,7 @@ function doneMain() {
     <div class="kv"><span>Final member trust</span><span>${G.trust}/100</span></div>
     <h2 style="margin-top:22px;font-size:18px">Discussion questions</h2>
     <ol class="qs">${qs.map(q => `<li>${q}</li>`).join("")}</ol>
-    <div class="actions"><button class="ghost" onclick="newClass()">Start a new class</button></div>`;
+    <div class="actions"><button class="ghost" onclick="newClass()">Start a new game</button></div>`;
 }
 function logView() {
   if (!G.log.length) return "";
@@ -521,7 +521,7 @@ function recapMain() {
   <div class="recap">
     <span class="label">Round ${r.round} results</span>
     <h2 class="recap-title">Premium: ${PLANS[r.plan].label}, ${fmt(PLANS[r.plan].price)} per group</h2>
-    <p class="muted">${planVotes ? `The class voted ${(r.planCounts[r.plan] || 0)} of ${planVotes} for this plan. ` : "The teacher chose this plan. "}${PLANS[r.plan].trust ? `This premium cost ${PLANS[r.plan].trust} trust.` : "This premium cost no trust."}</p>
+    <p class="muted">${planVotes ? `The agents' voted ${(r.planCounts[r.plan] || 0)} of ${planVotes} for this plan. ` : "The teacher chose this plan. "}${PLANS[r.plan].trust ? `This premium cost ${PLANS[r.plan].trust} trust.` : "This premium cost no trust."}</p>
     <div class="recap-grid">
       <div><span class="label">Claims</span>${claims}</div>
       <div><span class="label">Member trust</span>${trustBar}
@@ -554,7 +554,7 @@ function renderTeacher() {
   appEl.innerHTML = `
     <header class="top wide">
       <div><span class="label">Giveback Pool · Teacher</span>
-        <h1>${lobby ? "Join the class" : "Round " + Math.min(G.round, ROUNDS) + " of " + ROUNDS}</h1></div>
+        <h1>${lobby ? "Join the claim agents" : "Round " + Math.min(G.round, ROUNDS) + " of " + ROUNDS}</h1></div>
     </header>
     ${lobby ? "" : rail()}
     <div class="stack ${lobby ? "wide" : ""}">
@@ -570,9 +570,9 @@ function renderStudent() {
   let body;
   if (!joined) {
     body = G.status !== "lobby"
-      ? `<span class="label">Giveback Pool</span><h2>This class has already started</h2><p>Ask your teacher to open the next game, then scan the code again.</p>`
-      : `<span class="label">Giveback Pool</span><h2>Join the class</h2>
-         <p>Enter a name your class will recognize. It appears on the teacher's screen.</p>
+      ? `<span class="label">Giveback Pool</span><h2>The claim agents have already started</h2><p>Ask your teacher to open the next game, then scan the code again.</p>`
+      : `<span class="label">Giveback Pool</span><h2>Join the claim agents</h2>
+         <p>Enter a name your claim agents will recognize. It appears on the teacher's screen.</p>
          <div class="joinrow"><input id="nm" maxlength="24" placeholder="Your name" autocomplete="off"><button class="primary" onclick="join()">Join</button></div>`;
   } else {
     const name = esc(ME.name);
@@ -580,7 +580,7 @@ function renderStudent() {
       body = `<span class="label">You're in as ${name}</span><h2>Waiting to start</h2><p>Keep this page open. The teacher will start the game shortly.</p>`;
     } else if (G.status === "done") {
       body = `<span class="label">Final result</span><h2>Giveback complete</h2>
-        <p class="verdict">${G.result === "lost" ? (G.lostReason === "trust" ? "The class lost. Member trust hit zero." : `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`) : G.giveback > 0 ? "The class won. " + fmt(G.giveback) + " was hypothetically donated to the " + esc(G.charity.toLowerCase()) + "." : "The class won, with the pool at $0, so nothing was donated."}</p>
+        <p class="verdict">${G.result === "lost" ? (G.lostReason === "trust" ? "The claim agents lost. Member trust hit zero." : `The claim agents lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`) : G.giveback > 0 ? "The claim agents won. " + fmt(G.giveback) + " was hypothetically donated to the " + esc(G.charity.toLowerCase()) + "." : "The claim agents won, with the pool at $0, so nothing was donated."}</p>
         <div class="kv"><span>Pool members</span><span>${G.members}</span></div>
         <div class="kv"><span>Final member trust</span><span>${G.trust}/100</span></div>`;
     } else if (G.phase === "price") {
@@ -622,7 +622,7 @@ function renderStudent() {
 }
 
 function render() {
-  if (!LOADED) { appEl.innerHTML = `<div class="card wide"><p class="muted">Connecting to the class…</p></div>`; return; }
+  if (!LOADED) { appEl.innerHTML = `<div class="card wide"><p class="muted">Connecting to the claim agents…</p></div>`; return; }
   // The teacher code prompt comes first, so it still shows before any game exists.
   if (!IS_STUDENT && !IS_HOST) { renderTeacher(); return; }
   if (!G) {
