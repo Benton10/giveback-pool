@@ -304,11 +304,13 @@ function closeRound() {
     const d = effectiveClaim(c) || "half";
     const p = d === "full" ? c.amt : d === "half" ? c.amt / 2 : 0;
     paid += p; withheld += c.amt - p;
-    if (d === "half") loss += 3;
-    if (d === "deny") loss += c.tier === "large" ? 12 : 8;
+    if (d === "half") loss += c.tier === "large" ? 15 : 8;
+    if (d === "deny") loss += c.tier === "large" ? 25 : 15;
     decisions.push({ id: c.id, desc: c.desc, amt: c.amt, d, counts: cnt });
   }
-  const pool = G.pool - paid, trust = Math.max(0, G.trust - loss);
+  const pool = G.pool - paid;
+  if (pool < 0) loss += 10;   // members lose trust while the pool is in the red
+  const trust = Math.max(0, G.trust - loss);
   const log = [{ round: G.round, plan: PLANS[G.plan].label, claims: G.claims.length,
                  collected: G.members * PLANS[G.plan].price, paid, withheld }, ...G.log];
   const recap = { round: G.round, plan: G.plan, planCounts: votesFor("plan"), claims: decisions,
@@ -318,9 +320,13 @@ function closeRound() {
 }
 function nextRound() {
   const round = G.round + 1;
+  if (G.trust <= 0) {
+    saveState({ ...G, round, status: "done", phase: "result", result: "lost", lostReason: "trust", recap: null });
+    return;
+  }
   if (round > ROUNDS) {
     // After the last round: lost if the pool is below $0, otherwise the class picks a cause.
-    if (G.pool < 0) saveState({ ...G, round, status: "done", phase: "result", result: "lost", recap: null });
+    if (G.pool < 0) saveState({ ...G, round, status: "done", phase: "result", result: "lost", lostReason: "pool", recap: null });
     else saveState({ ...G, round, phase: "charity", recap: null });
     return;
   }
@@ -464,7 +470,7 @@ function charityMain() {
 }
 function doneMain() {
   let verdict;
-  if (G.result === "lost") verdict = `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`;
+  if (G.result === "lost") verdict = G.lostReason === "trust" ? "The class lost. Member trust hit zero." : `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`;
   else if (G.giveback > 0) verdict = `The class won. ${fmt(G.giveback)} was hypothetically donated to the ${esc(G.charity.toLowerCase())}.`;
   else verdict = "The class won, with the pool at $0 after round 12, so nothing was donated.";
   const qs = [
@@ -521,7 +527,7 @@ function recapMain() {
         <span class="big">${fmt(r.poolFrom)} → ${fmt(r.poolTo)}</span>
       </div>
     </div>
-    <div class="actions"><button class="primary" onclick="nextRound()">${r.round === ROUNDS ? "See the final result" : "Next round"}</button></div>
+    <div class="actions"><button class="primary" onclick="nextRound()">${G.trust <= 0 ? "See the result" : r.round === ROUNDS ? "See the final result" : "Next round"}</button></div>
   </div>`;
 }
 function renderTeacher() {
@@ -572,7 +578,7 @@ function renderStudent() {
       body = `<span class="label">You're in as ${name}</span><h2>Waiting to start</h2><p>Keep this page open. The teacher will start the game shortly.</p>`;
     } else if (G.status === "done") {
       body = `<span class="label">Final result</span><h2>Giveback complete</h2>
-        <p class="verdict">${G.result === "lost" ? `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.` : G.giveback > 0 ? "The class won. " + fmt(G.giveback) + " was hypothetically donated to the " + esc(G.charity.toLowerCase()) + "." : "The class won, with the pool at $0, so nothing was donated."}</p>
+        <p class="verdict">${G.result === "lost" ? (G.lostReason === "trust" ? "The class lost. Member trust hit zero." : `The class lost. The pool finished round ${ROUNDS} at ${fmt(G.pool)}.`) : G.giveback > 0 ? "The class won. " + fmt(G.giveback) + " was hypothetically donated to the " + esc(G.charity.toLowerCase()) + "." : "The class won, with the pool at $0, so nothing was donated."}</p>
         <div class="kv"><span>Pool members</span><span>${G.members}</span></div>
         <div class="kv"><span>Final member trust</span><span>${G.trust}/100</span></div>`;
     } else if (G.phase === "price") {
