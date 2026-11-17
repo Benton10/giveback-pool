@@ -322,6 +322,10 @@ function rail() {
   return `
   <div class="stack">
     <div class="card">
+      <span class="label">Round</span>
+      <span class="big">${Math.min(G.round, ROUNDS)} of ${ROUNDS}</span>
+    </div>
+    <div class="card">
       <span class="label">Pool balance</span>
       <span class="big">${fmt(G.pool)}</span>
       <span class="muted">Starts at ${fmt(START_POOL)}. ${DONATE_PCT}% is hypothetically donated if it ends above $0.</span>
@@ -329,18 +333,7 @@ function rail() {
     <div class="card">
       <span class="label">Member trust</span>
       <div class="meter"><span class="${G.trust >= 60 ? "" : G.trust >= 30 ? "warn" : "bad"}" style="width:${G.trust}%"></span></div>
-      <span class="muted">${G.trust}/100. Denied and cut claims lower trust.</span>
-    </div>
-    <div class="card">
-      <span class="label">Totals so far</span>
-      <div class="kv"><span>Premiums in</span><span>${fmt(G.premiumsIn)}</span></div>
-      <div class="kv"><span>Paid out</span><span>${fmt(G.paidOut)}</span></div>
-      <div class="kv"><span>Withheld</span><span>${fmt(G.withheld)}</span></div>
-    </div>
-    <div class="card">
-      <span class="label">Members in this pool</span>
-      <span class="big">${G.members}</span>
-      <span class="muted">Groups in the pool, counted when the game started.</span>
+      <span class="muted">${G.trust}/100</span>
     </div>
     <div class="card">
       <button class="ghost" onclick="restartGame()" style="width:100%">Start over</button>
@@ -485,7 +478,7 @@ function renderTeacher() {
     <div class="stack ${lobby ? "wide" : ""}">
       ${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ""}
       <div class="card">${body}</div>
-      ${lobby ? "" : logView()}
+
     </div>`;
 }
 
