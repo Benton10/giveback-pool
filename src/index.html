@@ -109,9 +109,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 const ROUNDS = 12, START_POOL = 1000;
 const DONATE_PCT = 50;   // if the pool ends above $0, this share is hypothetically donated
 const PLANS = {
-  low:      { label: "Low",      price: 100, note: "Cheapest for groups. Little cushion if a big claim lands." },
-  standard: { label: "Standard", price: 150, note: "Balanced. Works if claims stay near the average." },
-  high:     { label: "High",     price: 250, note: "Builds a cushion. Groups pay more each round." }
+  low:      { label: "Low",      price: 100, trust: 0, note: "Cheapest for groups. Little cushion if a big claim lands." },
+  standard: { label: "Standard", price: 150, trust: 1, note: "Balanced. Works if claims stay near the average." },
+  high:     { label: "High",     price: 200, trust: 3, note: "Builds a cushion. Groups pay more each round." }
 };
 const CHARITIES = ["Local food bank", "Animal shelter", "Youth reading program"];
 const CLAIMS = {
@@ -304,13 +304,14 @@ function closeRound() {
     const d = effectiveClaim(c) || "half";
     const p = d === "full" ? c.amt : d === "half" ? c.amt / 2 : 0;
     paid += p; withheld += c.amt - p;
-    if (d === "full") gain += c.tier === "large" ? 10 : 5;   // members feel looked after
+    if (d === "full") gain += c.tier === "large" ? 6 : 3;   // members feel looked after
     if (d === "half") loss += c.tier === "large" ? 15 : 8;
     if (d === "deny") loss += c.tier === "large" ? 25 : 15;
     decisions.push({ id: c.id, desc: c.desc, amt: c.amt, d, counts: cnt });
   }
   const pool = G.pool - paid;
   if (pool < 0) loss += 10;   // members lose trust while the pool is in the red
+  loss += PLANS[G.plan].trust;  // the premium itself costs trust each round
   const trust = Math.max(0, Math.min(100, G.trust - loss + gain));
   const log = [{ round: G.round, plan: PLANS[G.plan].label, claims: G.claims.length,
                  collected: G.members * PLANS[G.plan].price, paid, withheld }, ...G.log];
@@ -520,7 +521,7 @@ function recapMain() {
   <div class="recap">
     <span class="label">Round ${r.round} results</span>
     <h2 class="recap-title">Premium: ${PLANS[r.plan].label}, ${fmt(PLANS[r.plan].price)} per group</h2>
-    <p class="muted">${planVotes ? `The class voted ${(r.planCounts[r.plan] || 0)} of ${planVotes} for this plan.` : "The teacher chose this plan."}</p>
+    <p class="muted">${planVotes ? `The class voted ${(r.planCounts[r.plan] || 0)} of ${planVotes} for this plan. ` : "The teacher chose this plan. "}${PLANS[r.plan].trust ? `This premium cost ${PLANS[r.plan].trust} trust.` : "This premium cost no trust."}</p>
     <div class="recap-grid">
       <div><span class="label">Claims</span>${claims}</div>
       <div><span class="label">Member trust</span>${trustBar}
