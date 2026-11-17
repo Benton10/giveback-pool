@@ -291,17 +291,19 @@ function restartGame() {
   if (confirm("Start over? This ends the current game and clears the roster. Students will need to rejoin.")) newClass();
 }
 function setPlan(p) { if (G.phase === "price") saveState({ ...G, plan: p }); }
+// Uses the class's plan vote and does the same as "Collect premiums and open claims".
 function useMajority() {
   const r = resolve(votesFor("plan"), null);
   if (!r) { notice("No plan votes yet. Wait for the groups to vote."); return; }
-  notice(`The agents chose ${PLANS[r].label}.`);
-  setPlan(r);
+  collect(r);
 }
-function collect() {
-  const amt = G.members * PLANS[G.plan].price;
+// Collects premiums for the chosen plan (default: the plan the teacher has selected) and opens claims.
+function collect(planKey) {
+  const plan = planKey || G.plan;
+  const amt = G.members * PLANS[plan].price;
   const used = G.used || [];
   const claims = drawClaims(G.round, used);
-  saveState({ ...G, pool: G.pool + amt, premiumsIn: G.premiumsIn + amt, claims, used: [...used, ...claims.map(c => c.desc)], phase: "claims" });
+  saveState({ ...G, plan, pool: G.pool + amt, premiumsIn: G.premiumsIn + amt, claims, used: [...used, ...claims.map(c => c.desc)], phase: "claims" });
 }
 function setClaim(id, d) { saveState({ ...G, claims: G.claims.map(c => (c.id === id ? { ...c, decision: d } : c)) }); }
 // Simplified claim policy. Covered claims are paid in full. Partly covered claims are paid
@@ -440,7 +442,7 @@ function priceMain() {
         </button>`).join("")}
     </div>
     <div class="actions">
-      <button class="ghost" onclick="useMajority()">Use the agents' vote</button>
+      <button class="ghost" onclick="useMajority()">Use the agents' vote and open claims</button>
       <button class="primary" onclick="collect()">Collect premiums and open claims</button>
       <span class="hint">${voted} of ${G.members} groups voted. Collects ${fmt(G.members * PLANS[G.plan].price)}.</span>
     </div>`;
